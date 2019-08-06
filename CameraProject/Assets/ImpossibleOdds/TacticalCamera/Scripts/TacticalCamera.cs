@@ -141,6 +141,9 @@
 				StopCoroutine(moveToPositionHandle);
 				moveToPositionHandle = null;
 			}
+
+			isOrbiting = false;
+			orbitPoint = Vector3.zero;
 		}
 
 		private void LateUpdate()
