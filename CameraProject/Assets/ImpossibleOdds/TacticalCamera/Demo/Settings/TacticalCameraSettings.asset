@@ -60,7 +60,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  movementRolloffTime: 0.2
+  movementRolloffTime: 0.25
   moveToTargetSmoothingTime: 0.25
   heightRange:
     min: 0.5
@@ -118,7 +118,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   orbitalRolloffTime: 0.2
   pitchRangeHigh:
-    min: 70
+    min: 45
     max: 70
   pitchRangeLow:
     min: 10

@@ -5,7 +5,7 @@ The `TacticalCamera` package contains a small tool to help and develop your came
 * Keyboard / screen edge movement
 * Move to target
 * Zooming in / out
-* Smooth camera angle adjustments based on height
+* Smooth camera angle and movement speed adjustments based on the altitude
 * Pivot rotations - looking around its current position
 * Orbit rotations - orbit the camera around its focus point
 * Area of operation - restrict the camera to move only in a specific area
