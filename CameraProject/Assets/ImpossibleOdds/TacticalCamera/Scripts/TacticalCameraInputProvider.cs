@@ -130,6 +130,10 @@ namespace ImpossibleOdds.TacticalCamera
 			{
 				float value = Input.mouseScrollDelta.y;
 
+#if UNITY_STANDALONE_WIN
+				value *= 100f;
+#endif
+
 				if (invertZoom)
 				{
 					value *= -1f;

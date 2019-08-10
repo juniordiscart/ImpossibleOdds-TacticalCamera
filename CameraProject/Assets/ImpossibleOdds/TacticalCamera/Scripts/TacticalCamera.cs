@@ -5,8 +5,6 @@
 	using System.Collections.Generic;
 	using UnityEngine;
 
-	using ValueRange = TacticalCameraSettings.ValueRange;
-
 	public class TacticalCamera : MonoBehaviour
 	{
 		[SerializeField, Tooltip("Settings that define the camera's behaviour.")]
@@ -136,11 +134,7 @@
 			// By setting the time to 0, we basically reset them.
 			rolloffStates.ForEach(r => r.Time = 0f);
 
-			if (moveToPositionHandle != null)
-			{
-				StopCoroutine(moveToPositionHandle);
-				moveToPositionHandle = null;
-			}
+			StopMovemeToPositionRoutine();
 
 			isOrbiting = false;
 			orbitPoint = Vector3.zero;
@@ -239,6 +233,10 @@
 			if (inputProvider.MoveToFocusPoint)
 			{
 				MoveToFocusPoint();
+			}
+			else if ((moveToPositionHandle != null) && (moveForwardsState.RolloffTime == moveForwardsState.Time) || (moveSidewaysState.RolloffTime == moveSidewaysState.Time))
+			{
+				StopMovemeToPositionRoutine();
 			}
 
 			Vector3 movement = Vector3.zero;
@@ -372,6 +370,15 @@
 			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
 		}
 
+		private void StopMovemeToPositionRoutine()
+		{
+			if (moveToPositionHandle != null)
+			{
+				StopCoroutine(moveToPositionHandle);
+				moveToPositionHandle = null;
+			}
+		}
+
 		private IEnumerator RoutineMoveToPosition(Vector3 endPosition)
 		{
 			Vector3 velocity = Vector3.zero;
@@ -384,81 +391,6 @@
 			} while (velocity.sqrMagnitude > 0.001f);
 
 			moveToPositionHandle = null;
-		}
-
-		/// <summary>
-		/// Class to keep track of the current rolloff state of a value. It is controlled by time and a curve.
-		/// </summary>
-		private class RolloffState
-		{
-			private float time;
-			private float rolloffTime;
-			private float rolloffValue;
-			private AnimationCurve rolloffCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
-
-			public float Time
-			{
-				get { return time; }
-				set { time = value; }
-			}
-
-			public float Value
-			{
-				get
-				{
-					float t = Mathf.InverseLerp(rolloffTime, 0f, time);
-					return rolloffCurve.Evaluate(t) * rolloffValue;
-				}
-			}
-
-			public float RolloffTime
-			{
-				get { return rolloffTime; }
-				set
-				{
-					if (value <= 0f)
-					{
-						throw new System.ArgumentOutOfRangeException("The rolloff time should be a value larger than 0.");
-					}
-
-					rolloffTime = value;
-				}
-			}
-
-			public float RolloffValue
-			{
-				get { return rolloffValue; }
-				set
-				{
-					rolloffValue = value;
-					time = rolloffTime;
-				}
-			}
-
-			public AnimationCurve RolloffCurve
-			{
-				get { return rolloffCurve; }
-				set { rolloffCurve = value; }
-			}
-
-			public float Update()
-			{
-				if (time == 0f)
-				{
-					return 0f;
-				}
-
-				time = Mathf.Clamp(time - UnityEngine.Time.deltaTime, 0f, rolloffTime);
-				return Value;
-			}
-
-			public void ApplySettings(float rolloffTime, AnimationCurve rolloffCurve)
-			{
-				this.rolloffTime = rolloffTime;
-				this.rolloffCurve = rolloffCurve;
-				time = 0f;
-				rolloffValue = 0f;
-			}
 		}
 	}
 }

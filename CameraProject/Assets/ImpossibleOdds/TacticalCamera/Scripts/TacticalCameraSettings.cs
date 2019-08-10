@@ -1,6 +1,5 @@
 ﻿namespace ImpossibleOdds.TacticalCamera
 {
-	using System;
 	using UnityEngine;
 
 	[CreateAssetMenu(fileName = "TacticalCameraSettings", menuName = "Impossible Odds/Tactical Camera/Settings")]
@@ -12,27 +11,27 @@
 		[SerializeField, Tooltip("Rolloff curve for movement.")]
 		private AnimationCurve movementRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 		[SerializeField, Min(0f), Tooltip("Time for the movement to linger and fade out. (In seconds)")]
-		private float movementRolloffTime = 0f;
+		private float movementRolloffTime = 0.2f;
 		[SerializeField, Min(0f), Range(0f, 1f), Tooltip("Smoothing time when the camera is moving to its focus point.")]
-		private float moveToTargetSmoothingTime = 0f;
+		private float moveToTargetSmoothingTime = 0.2f;
 		[SerializeField, Min(0f), Tooltip("The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.")]
 		private ValueRange heightRange = new ValueRange();
 
 		[Header("Pivot Settings")]
 		[SerializeField, Min(0f), Tooltip("Maximum speed at which the camera will pivot around its origin. (In degrees per second)")]
-		private float maxPivotalSpeed;
+		private float maxPivotalSpeed = 180f;
 		[SerializeField, Tooltip("Rolloff curve for pivotal rotation.")]
 		private AnimationCurve pivotalRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 		[SerializeField, Min(0f), Tooltip("Time for the pivotal rolloff to linger and fade out. (In seconds)")]
-		private float pivotalRolloffTime = 0f;
+		private float pivotalRolloffTime = 0.2f;
 
 		[Header("Orbit Settings")]
 		[SerializeField, Min(0f), Tooltip("Maximum speed at which the camera will orbit around its focus point. (In degrees per second)")]
-		private float maxOrbitalSpeed;
+		private float maxOrbitalSpeed = 90f;
 		[SerializeField, Tooltip("Rolloff curve for orbital movement.")]
 		private AnimationCurve orbitalRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 		[SerializeField, Min(0f), Tooltip("Time for the orbital rolloff to linger and fade out. (In seconds)")]
-		private float orbitalRolloffTime = 0f;
+		private float orbitalRolloffTime = 0.2f;
 
 		[Header("Pitch Settings")]
 		[SerializeField, Tooltip("Range in which the camera can pitch when it is up high. (In degrees)")]
@@ -46,7 +45,7 @@
 		[SerializeField, Tooltip("Layers that are to used to interact with the camera movement.")]
 		private LayerMask interactionMask = 0;
 		[SerializeField, Tooltip("Maximum length of rays that are used for interacting with the world.")]
-		private float maxInteractionRayLength = 0;
+		private float maxInteractionRayLength = 1000f;
 
 		/// <summary>
 		/// Curve that defines the speed of the camera depending on its altitude.
@@ -190,49 +189,6 @@
 		{
 			get { return heightRange; }
 			set { heightRange = value; }
-		}
-
-		[Serializable]
-		public struct ValueRange
-		{
-			public float Min
-			{
-				get { return Mathf.Min(min, max); }
-			}
-
-			public float Max
-			{
-				get { return Mathf.Max(min, max); }
-			}
-
-			[SerializeField]
-			private float min;
-			[SerializeField]
-			private float max;
-
-			public static ValueRange Lerp(ValueRange a, ValueRange b, float t)
-			{
-				ValueRange result = new ValueRange();
-				result.min = Mathf.Lerp(a.min, b.min, t);
-				result.max = Mathf.Lerp(a.max, b.max, t);
-				return result;
-			}
-
-			public float Clamp(float value)
-			{
-				return Mathf.Clamp(value, Min, Max);
-			}
-
-			public void Set(float min, float max)
-			{
-				this.min = min;
-				this.max = max;
-			}
-
-			public override string ToString()
-			{
-				return string.Format("Min: {0}, Max: {1}", Min.ToString("0.000"), Max.ToString("0.000"));
-			}
 		}
 	}
 }
