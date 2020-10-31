@@ -1,17 +1,18 @@
-﻿/// <summary>
-/// A sample input implementation to provide input for the TacticalCamera.
-/// The best approach is to implement the input provider interface in your own input manager, and use this class as a sample implementation of expected inputs.
-/// </summary>
-namespace ImpossibleOdds.TacticalCamera
+﻿namespace ImpossibleOdds.TacticalCamera
 {
 	using UnityEngine;
 
+	/// <summary>
+	/// A sample input implementation to provide input for the TacticalCamera.
+	/// The best approach is to implement the input provider interface in your own input manager, and use this class as a sample implementation of expected inputs.
+	/// </summary>
 	[RequireComponent(typeof(TacticalCamera))]
 	public class TacticalCameraInputProvider : MonoBehaviour, ITacticalCameraInputProvider
 	{
-		public const string DefaultMouseYawAxis = "Mouse X";
-		public const string DefaultMousePitchAxis = "Mouse Y";
+		public const string DefaultMouseRotationAxis = "Mouse X";
+		public const string DefaultMouseTiltAxis = "Mouse Y";
 
+		[Header("Movement")]
 		[SerializeField, Tooltip("Key to move the camera forwards.")]
 		private KeyCode moveForwardKey = KeyCode.W;
 		[SerializeField, Tooltip("Key to move the camera backwards")]
@@ -20,23 +21,32 @@ namespace ImpossibleOdds.TacticalCamera
 		private KeyCode moveLeftKey = KeyCode.A;
 		[SerializeField, Tooltip("Key to move the camera to the right.")]
 		private KeyCode moveRightKey = KeyCode.D;
-		[SerializeField, Tooltip("Key to switch between pivoting the camera versus orbiting around a focus point.")]
-		private KeyCode orbitModifierKey = KeyCode.LeftAlt;
+		[SerializeField, Tooltip("Key to orbit the camera around it's focus target.")]
+		private KeyCode orbitCamera = KeyCode.LeftShift;
+		[SerializeField, Range(0f, 1f), Min(0f), Tooltip("Time interval between mouse clicks to register it as a double-click.")]
+		private float doubleClickTime = 0.1f;
+		[SerializeField, Range(0f, 0.5f), Tooltip("Screen edge detection for moving the camera. Expressed in percentage of the screen.")]
+		private float screenBorderTrigger = 0f;
+		[SerializeField, Tooltip("Should movement be triggered by an off-screen mouse cursor?")]
+		private bool triggerOffScreen = false;
+		[SerializeField, Min(0f), Tooltip("Value to multiply the scroll value with.")]
+		private float scrollSensitivityFactor = 100f;
+
+		[Header("Rotation")]
 		[SerializeField, Range(0, 1), Min(0), Tooltip("The mouse button that's used to move the camera to a position.")]
 		private int mouseMoveToPositionKey = 0;
 		[SerializeField, Range(0, 1), Min(0), Tooltip("The mouse button that's used to rotate the camera.")]
 		private int mouseRotationKey = 1;
-		[SerializeField, Tooltip("The mouse axis that is used for the pitch value during any form of rotation.")]
-		private string mousePitchRotationAxis = DefaultMousePitchAxis;
-		[SerializeField, Tooltip("The mouse axis that is used for the yaw value during any form of rotation.")]
-		private string mouseYawRotationAxis = DefaultMouseYawAxis;
-		[SerializeField, Range(0f, 1f), Min(0f), Tooltip("Time interval between mouse clicks to register it as a double-click.")]
-		private float doubleClickTime = 0.1f;
+		[SerializeField, Tooltip("The mouse axis that is used for tilting the camera up/down.")]
+		private string mouseTiltAxis = DefaultMouseTiltAxis;
+		[SerializeField, Tooltip("The mouse axis that is used for rotating the camera in the XZ-plane.")]
+		private string mouseRotationAxis = DefaultMouseRotationAxis;
 
-		[SerializeField, Tooltip("Invert the pitch input value.")]
-		private bool invertPitch = true;
-		[SerializeField, Tooltip("Invert the yaw input value.")]
-		private bool invertYaw = false;
+		[Header("Rotation Modifiers")]
+		[SerializeField, Tooltip("Invert the tilt input value.")]
+		private bool invertTilt = true;
+		[SerializeField, Tooltip("Invert the rotation input value.")]
+		private bool invertRotation = false;
 		[SerializeField, Tooltip("Invert the zoom value.")]
 		private bool invertZoom = true;
 		[SerializeField, Tooltip("Should the cursor be hidden when rotating the camera.")]
@@ -49,11 +59,8 @@ namespace ImpossibleOdds.TacticalCamera
 		private bool singleClicked = false;
 		private bool doubleClicked = false;
 
-		/// <summary>
-		/// Should the camera move towards its focus point.
-		/// </summary>
-		/// <value></value>
-		public bool MoveToFocusPoint
+		/// <inheritdoc />
+		public bool MoveToTarget
 		{
 			get
 			{
@@ -62,25 +69,55 @@ namespace ImpossibleOdds.TacticalCamera
 			}
 		}
 
-		/// <summary>
-		/// Should the camera move forward or backwards.
-		/// </summary>
-		/// <value>Positive value to move forward, negative to move backwards.</value>
+		/// <inheritdoc/>
+		public bool CancelMoveToTarget
+		{
+			get
+			{
+				return !Mathf.Approximately(Mathf.Abs(MoveForward), 0f) || !Mathf.Approximately(Mathf.Abs(MoveSideways), 0f) || Input.GetKeyDown(KeyCode.Escape);
+			}
+		}
+
+		/// <inheritdoc />
+		public bool OrbitAroundTarget
+		{
+			get { return Input.GetKey(orbitCamera); }
+		}
+
+		/// <inheritdoc />
 		public float MoveForward
 		{
 			get
 			{
 				float value = 0f;
 
-				if (Input.GetKey(moveForwardKey) || (Input.mousePosition.y >= Screen.height))
+				// Keyboard
+				if (Input.GetKey(moveForwardKey))
 				{
 					value += 1f;
 				}
 
-				if (Input.GetKey(moveBackwardKey) || (Input.mousePosition.y <= 0))
+				if (Input.GetKey(moveBackwardKey))
 				{
 					value -= 1f;
 				}
+
+				// Mouse
+				float mouseY = Input.mousePosition.y;
+
+				if ((mouseY >= (Screen.height * (1f - screenBorderTrigger))) &&
+					(triggerOffScreen || (mouseY <= Screen.height)))
+				{
+					value += 1f;
+				}
+
+				if ((mouseY <= (Screen.height * screenBorderTrigger)) &&
+					(triggerOffScreen || (mouseY >= 0f)))
+				{
+					value -= 1f;
+				}
+
+				value = Mathf.Clamp(value, -1f, 1f);
 
 				if (settings != null)
 				{
@@ -91,25 +128,40 @@ namespace ImpossibleOdds.TacticalCamera
 			}
 		}
 
-		/// <summary>
-		/// Should the camera move left or right.
-		/// </summary>
-		/// <value>Positive value to move right, negative to move left.</value>
+		/// <inheritdoc />
 		public float MoveSideways
 		{
 			get
 			{
 				float value = 0f;
 
-				if (Input.GetKey(moveLeftKey) || (Input.mousePosition.x <= 0))
+				// Keyboard
+				if (Input.GetKey(moveLeftKey))
 				{
 					value -= 1f;
 				}
 
-				if (Input.GetKey(moveRightKey) || (Input.mousePosition.x >= Screen.width))
+				if (Input.GetKey(moveRightKey))
 				{
 					value += 1f;
 				}
+
+				// Mouse
+				float mouseX = Input.mousePosition.x;
+
+				if ((mouseX <= (Screen.width * screenBorderTrigger)) &&
+					(triggerOffScreen || (mouseX >= 0f)))
+				{
+					value -= 1f;
+				}
+
+				if ((mouseX >= (Screen.width * (1f - screenBorderTrigger))) &&
+					(triggerOffScreen || (mouseX <= Screen.width)))
+				{
+					value += 1f;
+				}
+
+				value = Mathf.Clamp(value, -1f, 1f);
 
 				if (settings != null)
 				{
@@ -120,19 +172,12 @@ namespace ImpossibleOdds.TacticalCamera
 			}
 		}
 
-		/// <summary>
-		/// Should the camera move up or down.
-		/// </summary>
-		/// <value>Positive value to move up, negative to move down.</value>
+		/// <inheritdoc />
 		public float MoveUp
 		{
 			get
 			{
-				float value = Input.mouseScrollDelta.y;
-
-#if UNITY_STANDALONE_WIN
-				value *= 100f;
-#endif
+				float value = Input.mouseScrollDelta.y * scrollSensitivityFactor;
 
 				if (invertZoom)
 				{
@@ -143,20 +188,8 @@ namespace ImpossibleOdds.TacticalCamera
 			}
 		}
 
-		/// <summary>
-		/// Should the camera orbit around its focus point instead of pivoting around its origin when requested to rotate.
-		/// </summary>
-		/// <value>When true, the camera will orbit around its focus point.</value>
-		public bool PreferOrbitOverPivot
-		{
-			get { return Input.GetKey(orbitModifierKey); }
-		}
-
-		/// <summary>
-		/// Should the camera pitch around its pivot or focus point.
-		/// </summary>
-		/// <value>Positive value to pitch up, negative to pitch down.</value>
-		public float PitchDelta
+		/// <inheritdoc />
+		public float TiltDelta
 		{
 			get
 			{
@@ -164,29 +197,25 @@ namespace ImpossibleOdds.TacticalCamera
 
 				if (Input.GetMouseButton(mouseRotationKey))
 				{
-					value = Input.GetAxis(mousePitchRotationAxis);
+					value = Input.GetAxis(mouseTiltAxis);
 				}
 
-				if (invertPitch)
+				if (invertTilt)
 				{
 					value *= -1f;
 				}
 
 				if (settings != null)
 				{
-					// Pitch orbiting is a pretty counter-intuitive thing, so setting the value to 0 prevents orbital pitch.
-					value *= PreferOrbitOverPivot ? 0f /* settings.MaxOrbitalSpeed */ : settings.MaxPivotalSpeed;
+					value *= settings.MaxRotationalSpeed;
 				}
 
 				return value;
 			}
 		}
 
-		/// <summary>
-		/// Should the camera yaw around its pivot or focus point.
-		/// </summary>
-		/// <value>Positive value to yaw right, negative value to yaw left.</value>
-		public float YawDelta
+		/// <inheritdoc />
+		public float RotationDelta
 		{
 			get
 			{
@@ -194,17 +223,17 @@ namespace ImpossibleOdds.TacticalCamera
 
 				if (Input.GetMouseButton(mouseRotationKey))
 				{
-					value = Input.GetAxis(mouseYawRotationAxis);
+					value = Input.GetAxis(mouseRotationAxis);
 				}
 
-				if (invertYaw)
+				if (invertRotation)
 				{
 					value *= -1f;
 				}
 
 				if (settings != null)
 				{
-					value *= PreferOrbitOverPivot ? settings.MaxOrbitalSpeed : settings.MaxPivotalSpeed;
+					value *= settings.MaxRotationalSpeed;
 				}
 
 				return value;
@@ -231,13 +260,12 @@ namespace ImpossibleOdds.TacticalCamera
 				return;
 			}
 
-			bool isRotating = Input.GetMouseButton(mouseRotationKey);
-			if (Cursor.visible && isRotating)
+			if (Input.GetMouseButtonDown(mouseRotationKey))
 			{
 				Cursor.visible = false;
 				Cursor.lockState = CursorLockMode.Locked;
 			}
-			else if (!Cursor.visible && !isRotating)
+			else if (Input.GetMouseButtonUp(mouseRotationKey))
 			{
 				Cursor.visible = true;
 				Cursor.lockState = CursorLockMode.None;

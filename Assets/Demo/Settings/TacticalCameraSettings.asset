@@ -17,6 +17,15 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
+      value: 10
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
       value: 50
       inSlope: 0
       outSlope: 0
@@ -24,19 +33,10 @@ MonoBehaviour:
       weightedMode: 0
       inWeight: 0
       outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 10
-      inSlope: -71.15901
-      outSlope: -71.15901
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.058333337
-      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  movementRolloff:
+  movementFade:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -60,28 +60,59 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  movementRolloffTime: 0.25
-  moveToTargetSmoothingTime: 0.25
-  heightRange:
-    min: 0.5
+  movementFadeTime: 0.2
+  moveToTargetSmoothingTime: 0.2
+  absoluteHeightRange:
+    min: 0
+    max: 35
+  maxRotationSpeed: 180
+  rotationalFade:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  rotationalFadeTime: 0.2
+  tiltRangeLow:
+    min: -5
     max: 50
-  maxPivotalSpeed: 180
-  pivotalRolloff:
+  tiltRangeHigh:
+    min: 55
+    max: 80
+  tiltRangeTransition:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
-      inSlope: 0
-      outSlope: -1
+      value: 0
+      inSlope: 2
+      outSlope: 2
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 0
-      inSlope: -1
+      value: 1
+      inSlope: 0
       outSlope: 0
       tangentMode: 0
       weightedMode: 0
@@ -90,56 +121,27 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  pivotalRolloffTime: 0.2
-  maxOrbitalSpeed: 90
-  orbitalRolloff:
+  useDynamicFieldOfView: 1
+  dynamicFieldOfViewRange:
+    min: 60
+    max: 90
+  dynamicFieldOfViewTransition:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
+      value: 0
       inSlope: 0
-      outSlope: -1
+      outSlope: 0
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 0
-      inSlope: -1
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  orbitalRolloffTime: 0.2
-  pitchRangeHigh:
-    min: 45
-    max: 70
-  pitchRangeLow:
-    min: 10
-    max: 25
-  pitchRangeTransition:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
       value: 1
-      inSlope: 0
-      outSlope: -1
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: -1
-      outSlope: 0
+      inSlope: 2
+      outSlope: 2
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -150,4 +152,4 @@ MonoBehaviour:
   interactionMask:
     serializedVersion: 2
     m_Bits: 1
-  maxInteractionRayLength: 1000
+  interactionDistance: 1000

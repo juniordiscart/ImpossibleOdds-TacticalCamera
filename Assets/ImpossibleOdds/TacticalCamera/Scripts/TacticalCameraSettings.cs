@@ -7,45 +7,45 @@
 	{
 		[Header("Movement Settings")]
 		[SerializeField, Tooltip("Curve that defines the speed of the camera depending on its altitude.")]
-		private AnimationCurve movementSpeedTransition = AnimationCurve.Linear(0f, 10f, 1f, 1f);
-		[SerializeField, Tooltip("Rolloff curve for movement.")]
-		private AnimationCurve movementRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+		private AnimationCurve movementSpeedTransition = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+		[SerializeField, Tooltip("Fade curve for movement.")]
+		private AnimationCurve movementFade = AnimationCurve.Linear(0f, 1f, 1f, 0f);
 		[SerializeField, Min(0f), Tooltip("Time for the movement to linger and fade out. (In seconds)")]
-		private float movementRolloffTime = 0.2f;
+		private float movementFadeTime = 0.2f;
 		[SerializeField, Min(0f), Range(0f, 1f), Tooltip("Smoothing time when the camera is moving to its focus point.")]
 		private float moveToTargetSmoothingTime = 0.2f;
-		[SerializeField, Min(0f), Tooltip("The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.")]
-		private ValueRange heightRange = new ValueRange();
+		[SerializeField, Tooltip("The range of height values the camera can operate in.")]
+		private ValueRange absoluteHeightRange = new ValueRange();
 
-		[Header("Pivot Settings")]
-		[SerializeField, Min(0f), Tooltip("Maximum speed at which the camera will pivot around its origin. (In degrees per second)")]
-		private float maxPivotalSpeed = 180f;
-		[SerializeField, Tooltip("Rolloff curve for pivotal rotation.")]
-		private AnimationCurve pivotalRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
-		[SerializeField, Min(0f), Tooltip("Time for the pivotal rolloff to linger and fade out. (In seconds)")]
-		private float pivotalRolloffTime = 0.2f;
+		[Header("Rotation Settings")]
+		[SerializeField, Min(0f), Tooltip("Maximum speed at which the camera will rotate around its origin. (In degrees per second)")]
+		private float maxRotationSpeed = 180f;
+		[SerializeField, Tooltip("Fade curve for rotation.")]
+		private AnimationCurve rotationalFade = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+		[SerializeField, Min(0f), Tooltip("Time for the rotational fade to linger and fade out. (In seconds)")]
+		private float rotationalFadeTime = 0.2f;
 
-		[Header("Orbit Settings")]
-		[SerializeField, Min(0f), Tooltip("Maximum speed at which the camera will orbit around its focus point. (In degrees per second)")]
-		private float maxOrbitalSpeed = 90f;
-		[SerializeField, Tooltip("Rolloff curve for orbital movement.")]
-		private AnimationCurve orbitalRolloff = AnimationCurve.Linear(0f, 1f, 1f, 0f);
-		[SerializeField, Min(0f), Tooltip("Time for the orbital rolloff to linger and fade out. (In seconds)")]
-		private float orbitalRolloffTime = 0.2f;
+		[Header("Tilt Settings")]
+		[SerializeField, Tooltip("Range in which the camera can tilt when it is at its lowest operating position. (In degrees)")]
+		private ValueRange tiltRangeLow = new ValueRange();
+		[SerializeField, Tooltip("Range in which the camera can tilt when it is at its heighest operating position. (In degrees)")]
+		private ValueRange tiltRangeHigh = new ValueRange();
+		[SerializeField, Tooltip("Transition of tilt ranges from low to high.")]
+		private AnimationCurve tiltRangeTransition = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-		[Header("Pitch Settings")]
-		[SerializeField, Tooltip("Range in which the camera can pitch when it is up high. (In degrees)")]
-		private ValueRange pitchRangeHigh = new ValueRange();
-		[SerializeField, Tooltip("Range in which the camera can pitch when it is down low. (In degrees)")]
-		private ValueRange pitchRangeLow = new ValueRange();
-		[SerializeField, Tooltip("Transition of pitch ranges from high to low.")]
-		private AnimationCurve pitchRangeTransition = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+		[Header("Field of View")]
+		[SerializeField, Tooltip("Should the tactical camera apply a dynamic field-of-view based on its height range?")]
+		private bool useDynamicFieldOfView = true;
+		[SerializeField, Tooltip("The range of field-of-view values for the camera, depending on the height it's operating at.")]
+		private ValueRange dynamicFieldOfViewRange = new ValueRange();
+		[SerializeField, Tooltip("The transition of the field-of-view value from the lowest operating height to the highest operating height.")]
+		private AnimationCurve dynamicFieldOfViewTransition = AnimationCurve.Linear(0f, 0f, 1, 1f);
 
 		[Header("World Interaction Settings")]
-		[SerializeField, Tooltip("Layers that are to used to interact with the camera movement.")]
+		[SerializeField, Tooltip("Layers that are to used to interact with the camera, e.g. when lowering it towards the ground.")]
 		private LayerMask interactionMask = 0;
-		[SerializeField, Tooltip("Maximum length of rays that are used for interacting with the world.")]
-		private float maxInteractionRayLength = 1000f;
+		[SerializeField, Min(0f), Tooltip("Distance the camera can interact with the world, e.g. raycast distance.")]
+		private float interactionDistance = 1000f;
 
 		/// <summary>
 		/// Curve that defines the speed of the camera depending on its altitude.
@@ -57,21 +57,21 @@
 		}
 
 		/// <summary>
-		/// Rolloff curve for movement.
+		/// Fade curve for movement.
 		/// </summary>
-		public AnimationCurve MovementRolloff
+		public AnimationCurve MovementFadeCurve
 		{
-			get { return movementRolloff; }
-			set { movementRolloff = value; }
+			get { return movementFade; }
+			set { movementFade = value; }
 		}
 
 		/// <summary>
 		/// Time for the movement to linger and fade out. (In seconds)
 		/// </summary>
-		public float MovementRolloffTime
+		public float MovementFadeTime
 		{
-			get { return movementRolloffTime; }
-			set { movementRolloffTime = value; }
+			get { return movementFadeTime; }
+			set { movementFadeTime = value; }
 		}
 
 		/// <summary>
@@ -84,84 +84,93 @@
 		}
 
 		/// <summary>
+		/// The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.
+		/// </summary>
+		public ValueRange AbsoluteHeightRange
+		{
+			get { return absoluteHeightRange; }
+			set { absoluteHeightRange = value; }
+		}
+
+		/// <summary>
 		/// Maximum speed at which the camera will pivot around its origin. (In degrees per second)
 		/// </summary>
-		public float MaxPivotalSpeed
+		public float MaxRotationalSpeed
 		{
-			get { return maxPivotalSpeed; }
-			set { maxPivotalSpeed = value; }
+			get { return maxRotationSpeed; }
+			set { maxRotationSpeed = value; }
 		}
 
 		/// <summary>
-		/// Rolloff curve for pivotal rotation.
+		/// Fade curve for pivotal rotation.
 		/// </summary>
-		public AnimationCurve PivotalRolloff
+		public AnimationCurve RotationalFadeCurve
 		{
-			get { return pivotalRolloff; }
-			set { pivotalRolloff = value; }
+			get { return rotationalFade; }
+			set { rotationalFade = value; }
 		}
 
 		/// <summary>
-		/// Time for the pivotal rolloff to linger and fade out. (In seconds)
+		/// Time for the rotation to linger and fade out. (In seconds)
 		/// </summary>
-		public float PivotalRolloffTime
+		public float RotationalFadeTime
 		{
-			get { return pivotalRolloffTime; }
-			set { pivotalRolloffTime = value; }
+			get { return rotationalFadeTime; }
+			set { rotationalFadeTime = value; }
 		}
 
 		/// <summary>
-		/// Maximum speed at which the camera will orbit around its focus point. (In degrees per second)
+		/// Range in which the camera can tilt when it is up high. (In degrees)
 		/// </summary>
-		public float MaxOrbitalSpeed
+		public ValueRange TiltRangeHigh
 		{
-			get { return maxOrbitalSpeed; }
-			set { maxOrbitalSpeed = value; }
+			get { return tiltRangeHigh; }
+			set { tiltRangeHigh = value; }
 		}
 
 		/// <summary>
-		/// Rolloff curve for orbital movement.
+		/// Range in which the camera can tilt when it is down low. (In degrees)
 		/// </summary>
-		public AnimationCurve OrbitalRolloff
+		public ValueRange TiltRangeLow
 		{
-			get { return orbitalRolloff; }
-			set { orbitalRolloff = value; }
+			get { return tiltRangeLow; }
+			set { tiltRangeLow = value; }
 		}
 
 		/// <summary>
-		/// Time for the orbital rolloff to linger and fade out. (In seconds)
+		/// Transition of tilt ranges from low to high.
 		/// </summary>
-		public float OrbitalRolloffTime
+		public AnimationCurve TiltRangeTransition
 		{
-			get { return orbitalRolloffTime; }
-			set { orbitalRolloffTime = value; }
+			get { return tiltRangeTransition; }
+			set { tiltRangeTransition = value; }
 		}
 
 		/// <summary>
-		/// Range in which the camera can pitch when it is up high. (In degrees)
+		/// Should the tactical camera apply a dynamic field-of-view based on its height range?
 		/// </summary>
-		public ValueRange PitchRangeHigh
+		public bool UseDynamicFieldOfView
 		{
-			get { return pitchRangeHigh; }
-			set { pitchRangeHigh = value; }
+			get { return useDynamicFieldOfView; }
+			set { useDynamicFieldOfView = value; }
 		}
 
 		/// <summary>
-		/// Range in which the camera can pitch when it is down low. (In degrees)
+		/// The range of field-of-view values for the camera, depending on the height it's operating at.
 		/// </summary>
-		public ValueRange PitchRangeLow
+		public ValueRange DynamicFieldOfViewRange
 		{
-			get { return pitchRangeLow; }
-			set { pitchRangeLow = value; }
+			get { return dynamicFieldOfViewRange; }
+			set { dynamicFieldOfViewRange = value; }
 		}
 
 		/// <summary>
-		/// Transition of pitch ranges from high to low.
+		/// The transition of the field-of-view value from the lowest operating height to the highest operating height.
 		/// </summary>
-		public AnimationCurve PitchRangeTransition
+		public AnimationCurve DynamicFieldOfViewTransition
 		{
-			get { return pitchRangeTransition; }
-			set { pitchRangeTransition = value; }
+			get { return dynamicFieldOfViewTransition; }
+			set { dynamicFieldOfViewTransition = value; }
 		}
 
 		/// <summary>
@@ -174,21 +183,12 @@
 		}
 
 		/// <summary>
-		/// Maximum length of rays that are used for interacting with the world.
+		/// Distance the camera can interact with the world, e.g. raycast distance.
 		/// </summary>
-		public float MaxInteractionRayLength
+		public float InteractionDistance
 		{
-			get { return maxInteractionRayLength; }
-			set { maxInteractionRayLength = value; }
-		}
-
-		/// <summary>
-		/// The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.
-		/// </summary>
-		public ValueRange HeightRange
-		{
-			get { return heightRange; }
-			set { heightRange = value; }
+			get { return interactionDistance; }
+			set { interactionDistance = value; }
 		}
 	}
 }

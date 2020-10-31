@@ -5,32 +5,38 @@
 	using System.Collections.Generic;
 	using UnityEngine;
 
+	using ImpossibleOdds.DependencyInjection;
+
+	[RequireComponent(typeof(CharacterController))]
 	public class TacticalCamera : MonoBehaviour
 	{
-		[SerializeField, Tooltip("Settings that define the camera's behaviour.")]
-		private TacticalCameraSettings settings;
-		[SerializeField, Tooltip("Input provider.")]
-		private ITacticalCameraInputProvider inputProvider;
-		[SerializeField, Tooltip("Forces the camera to remain within a certain area.")]
-		private ITacticalCameraBounds bounds;
+		private const float Epsilon = 0.001f;
 
-		private ValueRange heightRange = new ValueRange();
-		private ValueRange pitchRange = new ValueRange();
-		private float pitchFactor = 0f;
+		[SerializeField, Inject, Tooltip("(Injectable) Settings that define the camera's behaviour.")]
+		private TacticalCameraSettings settings = null;
+		[SerializeField, Inject, Tooltip("(Injectable) The camera it is operating on.")]
+		private new Camera camera = null;
+		[Inject, Tooltip("(Injectable) Input provider.")]
+		private ITacticalCameraInputProvider inputProvider = null;
+		[Inject, Tooltip("(Injectable) Forces the camera to remain within a certain area.")]
+		private ITacticalCameraBounds bounds = null;
 
-		private bool isOrbiting = false;
-		private Vector3 orbitPoint = Vector3.zero;
+		private ValueRange operatingHeightRange = new ValueRange();
+		private ValueRange operatingTiltRange = new ValueRange();
+		private float tiltFactor = 0f;  // Factor that keeps track of the tilt in the operating tilt range. For smooth angle adjustment when moving vertically.
+
+		private CharacterController characterController = null;
 
 		private Coroutine moveToPositionHandle = null;
+		private Coroutine restrictTiltAngleHandle = null;
+		private Coroutine dynamicFieldOfViewHandle = null;
 
-		private RolloffState moveForwardsState = new RolloffState();
-		private RolloffState moveSidewaysState = new RolloffState();
-		private RolloffState moveUpwardsState = new RolloffState();
-		private RolloffState pivotPitchState = new RolloffState();
-		private RolloffState pivotYawState = new RolloffState();
-		private RolloffState orbitPitchState = new RolloffState();
-		private RolloffState orbitYawState = new RolloffState();
-		private List<RolloffState> rolloffStates = new List<RolloffState>();
+		private FadeState moveForwardsState = new FadeState();
+		private FadeState moveSidewaysState = new FadeState();
+		private FadeState moveUpwardsState = new FadeState();
+		private FadeState tiltState = new FadeState();
+		private FadeState rotationState = new FadeState();
+		private List<FadeState> fadeStates = new List<FadeState>();
 
 		/// <summary>
 		/// Settings that define how the camera should behave when moving or rotating.
@@ -80,24 +86,79 @@
 					return 0f;
 				}
 
-				float speedT = 1f - Mathf.Clamp01(Mathf.InverseLerp(settings.HeightRange.Min, settings.HeightRange.Max, transform.position.y));
+				float speedT = Mathf.Clamp01(Mathf.InverseLerp(operatingHeightRange.Min, operatingHeightRange.Max, CurrentHeight));
 				return settings.MovementSpeedTransition.Evaluate(speedT);
 			}
 		}
 
+		public float CurrentHeight
+		{
+			get { return transform.position.y; }
+		}
+
 		private void Awake()
 		{
+			characterController = GetComponent<CharacterController>();
+
 			ApplySettings(settings);
-			rolloffStates = new List<RolloffState>()
+			fadeStates = new List<FadeState>()
 			{
 				moveForwardsState,
 				moveSidewaysState,
 				moveUpwardsState,
-				pivotPitchState,
-				pivotYawState,
-				orbitPitchState,
-				orbitYawState,
+				tiltState,
+				rotationState,
 			};
+		}
+
+		private void OnEnable()
+		{
+			if ((inputProvider == null) || (settings == null))
+			{
+				return;
+			}
+
+			UpdateOperatingHeightRange();
+			UpdateTiltFactor();
+
+			if (restrictTiltAngleHandle == null)
+			{
+				restrictTiltAngleHandle = StartCoroutine(RoutineMonitorTilt());
+			}
+
+			if (dynamicFieldOfViewHandle == null)
+			{
+				dynamicFieldOfViewHandle = StartCoroutine(RoutineMonitorFieldOfView());
+			}
+		}
+
+		private void OnDisable()
+		{
+			// By setting the time to 0, we basically reset them.
+			fadeStates.ForEach(fs => fs.Reset());
+			StopRoutine(ref moveToPositionHandle);
+			StopRoutine(ref restrictTiltAngleHandle);
+			StopRoutine(ref dynamicFieldOfViewHandle);
+		}
+
+		private void LateUpdate()
+		{
+			if ((inputProvider == null) || (settings == null))
+			{
+				return;
+			}
+
+			UpdateStates(); // Process the inputs and fade the states
+			UpdateMovement();
+			UpdateRotation();
+			UpdateOperatingHeightRange();
+
+			ApplyHeightRestriction();
+
+			if (bounds != null)
+			{
+				bounds.Apply();
+			}
 		}
 
 		private void ApplySettings(TacticalCameraSettings settings)
@@ -109,55 +170,20 @@
 				return;
 			}
 
-			moveForwardsState.ApplySettings(settings.MovementRolloffTime, settings.MovementRolloff);
-			moveSidewaysState.ApplySettings(settings.MovementRolloffTime, settings.MovementRolloff);
-			moveUpwardsState.ApplySettings(settings.MovementRolloffTime, settings.MovementRolloff);
-			pivotPitchState.ApplySettings(settings.PivotalRolloffTime, settings.PivotalRolloff);
-			pivotYawState.ApplySettings(settings.PivotalRolloffTime, settings.PivotalRolloff);
-			orbitPitchState.ApplySettings(settings.OrbitalRolloffTime, settings.OrbitalRolloff);
-			orbitYawState.ApplySettings(settings.OrbitalRolloffTime, settings.OrbitalRolloff);
-		}
+			moveForwardsState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
+			moveSidewaysState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
+			moveUpwardsState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
+			tiltState.ApplySettings(settings.RotationalFadeTime, settings.RotationalFadeCurve);
+			rotationState.ApplySettings(settings.RotationalFadeTime, settings.RotationalFadeCurve);
 
-		private void OnEnable()
-		{
-			if ((inputProvider == null) || (settings == null))
+			if (restrictTiltAngleHandle == null)
 			{
-				return;
+				restrictTiltAngleHandle = StartCoroutine(RoutineMonitorTilt());
 			}
 
-			UpdateHeightRange();
-			UpdatePitchFactor();
-		}
-
-		private void OnDisable()
-		{
-			// By setting the time to 0, we basically reset them.
-			rolloffStates.ForEach(r => r.Time = 0f);
-
-			StopMovemeToPositionRoutine();
-
-			isOrbiting = false;
-			orbitPoint = Vector3.zero;
-		}
-
-		private void LateUpdate()
-		{
-			if ((inputProvider == null) || (settings == null))
+			if (dynamicFieldOfViewHandle == null)
 			{
-				return;
-			}
-
-			UpdateStates();
-			UpdateMovement();
-			UpdatePitchRange();
-			UpdateRotation();
-			UpdateHeightRange();
-			ApplyPitchFactor();
-			ApplyHeightRestriction();
-
-			if (bounds != null)
-			{
-				bounds.Apply();
+				dynamicFieldOfViewHandle = StartCoroutine(RoutineMonitorFieldOfView());
 			}
 		}
 
@@ -173,43 +199,16 @@
 			UpdateState(inputProvider.MoveSideways, moveSidewaysState);
 			UpdateState(inputProvider.MoveUp, moveUpwardsState);
 
-			// Rotating - Pivoting versus orbiting
-			if (inputProvider.PreferOrbitOverPivot)
-			{
-				if (!isOrbiting)
-				{
-					RaycastHit hitInfo;
-					if (Physics.Raycast(transform.position, transform.forward, out hitInfo, settings.MaxInteractionRayLength, settings.InteractionMask, QueryTriggerInteraction.Ignore))
-					{
-						isOrbiting = true;
-						orbitPoint = hitInfo.point;
-					}
-				}
-
-				if (isOrbiting)
-				{
-					UpdateState(inputProvider.PitchDelta, orbitPitchState);
-					UpdateState(inputProvider.YawDelta, orbitYawState);
-				}
-
-				pivotPitchState.Update();
-				pivotYawState.Update();
-			}
-			else
-			{
-				UpdateState(inputProvider.PitchDelta, pivotPitchState);
-				UpdateState(inputProvider.YawDelta, pivotYawState);
-				orbitPitchState.Update();
-				orbitYawState.Update();
-				isOrbiting = false;
-			}
+			// Rotating
+			UpdateState(inputProvider.TiltDelta, tiltState);
+			UpdateState(inputProvider.RotationDelta, rotationState);
 		}
 
-		private void UpdateState(float inputValue, RolloffState state)
+		private void UpdateState(float inputValue, FadeState state)
 		{
 			if (Mathf.Approximately(inputValue, 0f))
 			{
-				state.Update();
+				state.Tick();
 			}
 			else
 			{
@@ -219,139 +218,146 @@
 				float value = state.Value;
 				if (((Math.Sign(inputValue) + Math.Sign(value)) != 0) || (Mathf.Abs(inputValue) > Mathf.Abs(value)))
 				{
-					state.RolloffValue = inputValue;
+					state.FadeValue = inputValue;
 				}
 				else
 				{
-					state.Update();
+					state.Tick();
 				}
 			}
 		}
 
 		private void UpdateMovement()
 		{
-			if (inputProvider.MoveToFocusPoint)
+			// If moving to a focus point and the animation is requested to be cancelled.
+			if ((moveToPositionHandle != null) && inputProvider.CancelMoveToTarget)
 			{
-				MoveToFocusPoint();
+				StopCoroutine(moveToPositionHandle);
+				moveToPositionHandle = null;
 			}
-			else if ((moveToPositionHandle != null) && (moveForwardsState.RolloffTime == moveForwardsState.Time) || (moveSidewaysState.RolloffTime == moveSidewaysState.Time))
+			else if (inputProvider.MoveToTarget)
 			{
-				StopMovemeToPositionRoutine();
+				MoveToTarget();
 			}
 
-			Vector3 movement = Vector3.zero;
+			Vector3 direction = Vector3.zero;
 
 			// If the camera isn't moving towards its focus point,
 			// then we apply the forward and sideways movement
-			if (moveToPositionHandle == null)
+			if (!IsMovingToFocusPoint)
 			{
-				// TODO: an edge-case occurs when the camera is facing 90 degrees down/up. Fix this?
-				Vector3 projectedForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
-				Vector3 projectedRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
+				if (moveForwardsState.IsActive)
+				{
+					Vector3 projectedForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
 
-				movement += (projectedForward * moveForwardsState.Value) + (projectedRight * moveSidewaysState.Value);
+					// If the projected forward vector is close to 0, then that means the camera is facing down,
+					// Then we use the up-vector as an indicator to go forward.
+					if (projectedForward.sqrMagnitude <= Epsilon)
+					{
+						projectedForward = Vector3.ProjectOnPlane(transform.up, Vector3.up).normalized;
+					}
+
+					direction += projectedForward * moveForwardsState.Value;
+				}
+
+				if (moveSidewaysState.IsActive)
+				{
+					Vector3 projectedRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
+					direction += projectedRight * moveSidewaysState.Value;
+				}
 			}
 
-			movement.y = moveUpwardsState.Value;    // Zooming in/out. Always in world-space.
-
-			// If we are zooming in/out, we keep in mind the current pitch factor.
-			// which keeps the camera's pitch around the same level
-			if (!Mathf.Approximately(movement.y, 0f))
+			if (moveUpwardsState.IsActive)
 			{
-				ApplyPitchFactor();
+				direction.y = moveUpwardsState.Value;
 			}
 
-			movement = Vector3.ClampMagnitude(movement, MaxMovementSpeed); // Clamp to max speed
-			movement *= Time.deltaTime; // Timescaling
-			transform.Translate(movement, Space.World);
+			direction.Normalize();
+			Vector3 movement = direction * MaxMovementSpeed * Time.deltaTime;
+			float distance = movement.magnitude;
+
+			// If hardly any movement is generated, just quit here then
+			if (distance < Epsilon)
+			{
+				return;
+			}
+
+			characterController.Move(movement);
 		}
 
 		private void UpdateRotation()
 		{
-			// Pivot - Pitch - Rotate around the local right vector
-			if (!Mathf.Approximately(0f, pivotPitchState.Value))
+			if (rotationState.IsActive)
 			{
-				transform.Rotate(Vector3.right, pivotPitchState.Value * Time.deltaTime, Space.Self);
-				UpdatePitchFactor();    // We update this one only because pitch is changing
+				if (inputProvider.OrbitAroundTarget && Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
+				{
+					// Rotation - Rotate horizontally around the focus point
+					transform.RotateAround(hit.point, Vector3.up, rotationState.Value * Time.deltaTime);
+				}
+				else
+				{
+					// Rotation - Rotate around the world up vector
+					transform.Rotate(Vector3.up, rotationState.Value * Time.deltaTime, Space.World);
+				}
 			}
 
-			// Pivot - Yaw - Rotate around the world up vector
-			if (!Mathf.Approximately(0f, pivotYawState.Value))
+			// Tilt - Rotate around the local right vector
+			if (tiltState.IsActive)
 			{
-				transform.Rotate(Vector3.up, pivotYawState.Value * Time.deltaTime, Space.World);
+				transform.Rotate(transform.right, tiltState.Value * Time.deltaTime, Space.World);
+				Vector3 localAngles = transform.localEulerAngles;
+				localAngles.x = Mathf.Clamp(localAngles.x, operatingTiltRange.Min, operatingTiltRange.Max);
+				transform.localEulerAngles = localAngles;
+				UpdateTiltFactor();
 			}
 
-			// Orbit - Pitch - Rotate around the local right vector at the focus point
-			if (!Mathf.Approximately(0f, orbitPitchState.Value))
-			{
-				transform.RotateAround(orbitPoint, transform.right, orbitPitchState.Value * Time.deltaTime);
-			}
-
-			// Orbit - Yaw - Rotate around the world up vector at the focus point
-			if (!Mathf.Approximately(0f, orbitYawState.Value))
-			{
-				transform.RotateAround(orbitPoint, Vector3.up, orbitYawState.Value * Time.deltaTime);
-			}
+			// Dirty fix for now: keep the z-value of the local Euler angles 0 to prevent drifting.
+			Vector3 localEulerAngles = transform.localEulerAngles;
+			localEulerAngles.z = 0f;
+			transform.localEulerAngles = localEulerAngles;
 		}
 
-		private void UpdatePitchRange()
-		{
-			float t = Mathf.InverseLerp(heightRange.Min, heightRange.Max, transform.position.y);
-			t = Mathf.Clamp01(t);
-			t = settings.PitchRangeTransition.Evaluate(t);
-			pitchRange = ValueRange.Lerp(settings.PitchRangeHigh, settings.PitchRangeLow, t);
-		}
-
-		private void UpdatePitchFactor()
+		private void UpdateTiltFactor()
 		{
 			// Restrict the camera's tilt (x-value). When the camera's tilt
 			// reaches the horizon (0 degrees), it will wrap around back to 360.
 			// To counter this, we will do a -360 degrees offset.
-			float pitch = transform.localEulerAngles.x;
-			pitch = (pitch > 180f) ? (pitch - 360f) : pitch;
-			pitch = Mathf.Clamp(pitch, pitchRange.Min, pitchRange.Max);
-			pitchFactor = Mathf.InverseLerp(pitchRange.Min, pitchRange.Max, pitch);
+			float tilt = transform.localEulerAngles.x;
+			tilt = (tilt > 180f) ? (tilt - 360f) : tilt;
+			tilt = Mathf.Clamp(tilt, operatingTiltRange.Min, operatingTiltRange.Max);
+			tiltFactor = Mathf.InverseLerp(operatingTiltRange.Min, operatingTiltRange.Max, tilt);
 		}
 
-		private void UpdateHeightRange()
+		private void UpdateOperatingHeightRange()
 		{
-			RaycastHit hit;
-			if (Physics.Raycast(transform.position, Vector3.down, out hit, settings.MaxInteractionRayLength, settings.InteractionMask))
-			{
-				// If we're not over the same height minimum anymore,
-				// we update the pitch range and factor, as we get a hitch otherwise.
-				if (!Mathf.Approximately(heightRange.Min, hit.point.y + settings.HeightRange.Min))
-				{
-					heightRange.Set(hit.point.y + settings.HeightRange.Min, settings.HeightRange.Max);
-					UpdatePitchRange();
-					UpdatePitchFactor();
-				}
-				else
-				{
-					heightRange.Set(hit.point.y + settings.HeightRange.Min, settings.HeightRange.Max);
-				}
-			}
-			else
-			{
-				heightRange.Set(settings.HeightRange.Min, settings.HeightRange.Max);
-			}
-		}
+			float targetMin = settings.AbsoluteHeightRange.Min;
+			float targetMax = settings.AbsoluteHeightRange.Max;
 
-		private void ApplyPitchFactor()
-		{
-			Vector3 localAngles = transform.localEulerAngles;
-			localAngles.x = Mathf.Lerp(pitchRange.Min, pitchRange.Max, pitchFactor);
-			transform.localEulerAngles = localAngles;
+			// Define a possibly height operational minimum.
+			if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit minHit, settings.AbsoluteHeightRange.Range, settings.InteractionMask))
+			{
+				targetMin = Mathf.Max(minHit.point.y, targetMin);
+			}
+
+			// Define a possibly lower operational maximum. This one will most likely
+			// never occur, unless we enter some kind of cave or structure with overhanging objects.
+			if (Physics.Raycast(transform.position, Vector3.up, out RaycastHit maxHit, settings.AbsoluteHeightRange.Range, settings.InteractionMask))
+			{
+				targetMax = Mathf.Min(maxHit.point.y, targetMax);
+			}
+
+			// TODO: fix hitch?
+			operatingHeightRange.Set(targetMin, targetMax);
 		}
 
 		private void ApplyHeightRestriction()
 		{
 			Vector3 position = transform.position;
-			position.y = Mathf.Clamp(position.y, heightRange.Min, heightRange.Max);
+			position.y = Mathf.Clamp(CurrentHeight, operatingHeightRange.Min, operatingHeightRange.Max);
 			transform.position = position;
 		}
 
-		private void MoveToFocusPoint()
+		private void MoveToTarget()
 		{
 			if (moveToPositionHandle != null)
 			{
@@ -361,7 +367,7 @@
 
 			RaycastHit hitInfo;
 			Ray direction = Camera.main.ScreenPointToRay(Input.mousePosition);
-			if (!Physics.Raycast(direction, out hitInfo, settings.MaxInteractionRayLength, settings.InteractionMask, QueryTriggerInteraction.Ignore))
+			if (!Physics.Raycast(direction, out hitInfo, float.MaxValue, settings.InteractionMask, QueryTriggerInteraction.Ignore))
 			{
 				return;
 			}
@@ -370,12 +376,12 @@
 			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
 		}
 
-		private void StopMovemeToPositionRoutine()
+		private void StopRoutine(ref Coroutine handle)
 		{
-			if (moveToPositionHandle != null)
+			if (handle != null)
 			{
-				StopCoroutine(moveToPositionHandle);
-				moveToPositionHandle = null;
+				StopCoroutine(handle);
+				handle = null;
 			}
 		}
 
@@ -384,13 +390,60 @@
 			Vector3 velocity = Vector3.zero;
 			do
 			{
-				endPosition.y = transform.position.y;
-				transform.position = Vector3.SmoothDamp(transform.position, endPosition, ref velocity, settings.MoveToTargetSmoothingTime, MaxMovementSpeed);
+				endPosition.y = CurrentHeight;
+				Vector3 target = Vector3.SmoothDamp(transform.position, endPosition, ref velocity, settings.MoveToTargetSmoothingTime);
+				characterController.Move(target - transform.position);
 				yield return null;
 
-			} while (velocity.sqrMagnitude > 0.001f);
+			} while (velocity.sqrMagnitude > Epsilon);
 
 			moveToPositionHandle = null;
+		}
+
+		private IEnumerator RoutineMonitorTilt()
+		{
+			float tiltLowVelocity = 0f;
+			float tiltHighVelocity = 0f;
+
+			WaitForEndOfFrame waitHandle = new WaitForEndOfFrame();
+
+			while (true)
+			{
+				// Adapt the operating tilt range based on the operating height range, and if it's
+				// over its limits, then move it towards it's target range.
+				float t = Mathf.InverseLerp(operatingHeightRange.Min, operatingHeightRange.Max, CurrentHeight);
+				t = Mathf.Clamp01(t);
+				t = settings.TiltRangeTransition.Evaluate(t);
+				ValueRange targetRange = ValueRange.Lerp(settings.TiltRangeLow, settings.TiltRangeHigh, t);
+				operatingTiltRange.Set(
+					Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowVelocity, 0.2f),
+					Mathf.SmoothDampAngle(operatingTiltRange.Max, targetRange.Max, ref tiltHighVelocity, 0.2f));
+
+				// Apply the tilt factor
+				Vector3 localAngles = transform.localEulerAngles;
+				localAngles.x = Mathf.Lerp(operatingTiltRange.Min, operatingTiltRange.Max, tiltFactor);
+				transform.localEulerAngles = localAngles;
+
+				yield return waitHandle;
+			}
+		}
+
+		private IEnumerator RoutineMonitorFieldOfView()
+		{
+			float velocity = 0f;
+			WaitForEndOfFrame waitHandle = new WaitForEndOfFrame();
+
+			while (true)
+			{
+				if ((camera != null) && (settings != null) && settings.UseDynamicFieldOfView)
+				{
+					float t = Mathf.InverseLerp(operatingHeightRange.Min, operatingHeightRange.Max, CurrentHeight);
+					float target = Mathf.Lerp(settings.DynamicFieldOfViewRange.Min, settings.DynamicFieldOfViewRange.Max, settings.DynamicFieldOfViewTransition.Evaluate(t));
+					camera.fieldOfView = Mathf.SmoothDamp(camera.fieldOfView, target, ref velocity, 0.2f);
+				}
+
+				yield return waitHandle;
+			}
 		}
 	}
 }

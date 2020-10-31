@@ -1,0 +1,3 @@
+[submodule "submodules/Toolkit"]
+	path = submodules/Toolkit
+	url = https://github.com/juniordiscart/Impossible-Odds---Toolkit.git

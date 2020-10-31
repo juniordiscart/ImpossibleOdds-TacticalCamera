@@ -7,7 +7,6 @@ The `TacticalCamera` package contains a small tool to help and develop your came
 * Zooming in / out
 * Smooth camera angle and movement speed adjustments based on the altitude
 * Pivot rotations - looking around its current position
-* Orbit rotations - orbit the camera around its focus point
 * Area of operation - restrict the camera to move only in a specific area
 * Flexible and easy to use settings
 * Easily integrates with your input classes
@@ -34,28 +33,23 @@ The `TacticalCameraSettings` describe how the camera reacts whenever it is asked
 
   * Movement settings. These settings relate to moving the camera around in the game world.
     * The movement speed transition describes how the speed of the camera is affected by the camera's altitude. When at a high altitude, it may make more sense to move faster than when it is low to the ground to see all the details on the battlefield. If you like it to have a consistent speed at every altitude, make it a flat line from left to right.
-	* The movement rolloff describes how a movement value should smooth out when no input is given anylonger.
-	* The movement rolloff time defines how long this smoothing should take.
+	* The movement fade describes how a movement value should smooth out when no input is given anylonger.
+	* The movement fade time defines how long this smoothing should take.
 	* The move to target position smoothing time defines how long the camera should smooth when it is moving to it's target destination, i.e. by double clicking on the terrain, it will move to that location.
 	* The height range defines the minimum _relative height_ and the _absolute maximum_ height. The minimum value is relative to the terrain or ground objects the camera is hovering over. For example, it will always keep a minimum altitude, even over some hills or mountains. The maximum value is absolute, so the camera will never go above that height in worldspace.
 
   * Pivot settings. These settings relate to the camera rotating around its local position.
-	* The max pivotal speed is the maximum amount of degrees the camera can rotate per second.
-	* The pivotal rolloff is the curve that defines the smoothing of the pivot manouvre after no input is given anymore.
-	* The pivotal rolloff time is the amount of time this smoothing should happen.
+	* The max rotational speed is the maximum amount of degrees the camera can rotate per second.
+	* The rotational fade is the curve that defines the smoothing of the pivot manouvre after no input is given anymore.
+	* The rotational fade time is the amount of time this smoothing should happen.
 
-  * Orbit settings. These settings relate to the camera rotating around its current point of focus. A ray is cast from the camera into the world (see the world interaction settings), and will orbit around it.
-	* The max orbital speed is the distance the camera can cover per second while orbiting.
-	* The orbital rolloff curve is the smoothing curve after no input is given anymore.
-	* The orbital rolloff time is the amount of time this smoothing should happen.
-
-  * Pitch settings. These settings relate to the range in which the camera can pitch or tilt around its x axis. Based on the camera's altitude, the range in which it can tilt is modified. This allows to restrict the camera from looking too far down while near the ground and keeping the camera on the action at all times.
-	* Pitch range high: the range of angles (in degrees) the camera can look down while it is up high.
-	* Pitch range low: the range of angles (in degrees) the camera can look down while it is close to the ground.
-	* Pitch range transition: in what way should the transition of these range of values be interpolated. The left side is considered to be up high, while the right is considered to be down low.
+  * Tilt settings. These settings relate to the range in which the camera can tile or tilt around its x axis. Based on the camera's altitude, the range in which it can tilt is modified. This allows to restrict the camera from looking too far down while near the ground and keeping the camera on the action at all times.
+	* Tilt range low: the range of angles (in degrees) the camera can look down while it is close to the ground.
+	* Tilt range high: the range of angles (in degrees) the camera can look down while it is up high.
+	* Tilt range transition: in what way should the transition of these range of values be interpolated. The left side is considered to be down low, while the right is considered to be up high.
 
   * World interaction settings. These settings relate to some aspects of how you set up your game world.
-	* Interaction mask: defines what layers of your game world are interesting for the camera to interact with. For example, to make the camera orbit, or to let it determine what is ground level, the camera will shoot some rays into the world. Here you can set which layers should be considered to interact with. This can also help in optimizing performance when the camera is used in densly populated worlds.
+	* Interaction mask: defines what layers of your game world are interesting for the camera to interact with. For example, or to let it determine what is ground level, the camera will shoot some rays into the world. Here you can set which layers should be considered to interact with. This can also help in optimizing performance when the camera is used in densly populated worlds.
 	* Max interaction ray length: to further help in getting great performance, restricitng the length of the raycasts helps in culling far away objects. Set this to a sensible length depending on how high your camera can go, and how far it can see in the distance, i.e. the far plane value of the camera component.
 
 ## Custom input

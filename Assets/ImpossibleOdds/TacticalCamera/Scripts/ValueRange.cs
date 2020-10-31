@@ -8,12 +8,17 @@
 	{
 		public float Min
 		{
-			get { return Mathf.Min(min, max); }
+			get { return min; }
 		}
 
 		public float Max
 		{
-			get { return Mathf.Max(min, max); }
+			get { return max; }
+		}
+
+		public float Range
+		{
+			get { return Mathf.Abs(max - min); }
 		}
 
 		[SerializeField]
@@ -36,8 +41,13 @@
 
 		public void Set(float min, float max)
 		{
-			this.min = min;
-			this.max = max;
+			this.min = Mathf.Min(min, max);
+			this.max = Mathf.Max(min, max);
+		}
+
+		public bool InRange(float value)
+		{
+			return (value >= Min) && (value <= Max);
 		}
 
 		public override string ToString()
