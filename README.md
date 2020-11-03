@@ -1,67 +1,71 @@
-# Impossible Odds - Tactical Camera
+# ![Impossible Odds Logo][Logo] Impossible Odds - Tactical Camera
 
-The `TacticalCamera` package contains a small tool to help and develop your camera system useful for tactical environment overviews in strategy games or games that require some kind of birds-eye view of a map. It provides a setup to smoothly move, zoom and rotate the camera and limit its range of action. Supported features:
+The `TacticalCamera` package provides a camera system for smoothly navigating your environments. It allows for both a top-down tactical view as well as close-up action views with some additional features:
 
-* Keyboard / screen edge movement
-* Move to target
-* Zooming in / out
-* Smooth camera angle and movement speed adjustments based on the altitude
-* Pivot rotations - looking around its current position
-* Area of operation - restrict the camera to move only in a specific area
-* Flexible and easy to use settings
-* Easily integrates with your input classes
+* Move using keyboard input.
+* Move using screen edge detection.
+* Move to target position.
+* Zooming in / out.
+* Look rotations, with height-adjusted tilt limits.
+* Orbit rotations around the focus point.
+* Dynamic field of view, based on height.
+* Height-adjusted movement speed.
+* Restricted area of operation.
+* Smooth collision resolve with terrain and objects.
+* Extensive customization using animation curves.
 
-![alt text][TacticalCameraFeatures]
+It's also designed to have minimal setup and integrate well in existing projects.
 
 ## Setting up the camera
 
-The `TacticalCamera` package requires little setup. Hookup the `TacticalCamera` component to your camera GameObject and assign your settings. You can read more about these settings down below. To make the `TacticalCamera` move, you also need to provide it with an input provider. As a sample, you can add the `TacticalCameraInputProvider` component to the camera. Optionally, you can add the `TacticalCameraBoxBounds` component to restrict the area of movement. Hit play!
+The `TacticalCamera` Component requires to be put on your `Camera` GameObject. It will also use a `CharacterController` which is added automatically (if not there already) to resolve collisions as well as smoothly go over any terrain and obstacles.
 
-![alt text][TacticalCameraSetup]
+It requires two things to operate:
+* An input provider: the `TacticalCameraInputProvider` Component is a sample implementation which is perfect for testing and quick setup.
+* Animation settings: create an instance of the `TacticalCameraSettings` ScriptableObject. Adjust these to define how your camera should animate and smooth out.
 
-The `TacticalCamera` script only manages the state of the camera's movement. It does not process inputs directly, so it requires something that processes and provides the player's desired camera input. Next to this input provider, it also requires some settings that defines its behaviour. These settings describe how the camera reacts to these inputs and how they should smooth out.
+Assign these to their respective fields in the Unity inspector view of the `TacticalCamera`.
 
-Optionally, you can also place some bounds on the area of operation of the camera.
+Optionally, you can also place some bounds on the area of operation of the camera. The `TacticalCameraBoxBounds` is a sample implementation to restrict your camera to operating in an axis-align box.
 
-## Camera settings
+## Advanced
 
-The `TacticalCameraSettings` describe how the camera reacts whenever it is asked to move, zoom or rotate. The settings mostly consist of curves that describe the way the camera should smooth out a certain movement. Below is a detailed description of each of these settings.
+### Settings
 
-![alt text][TacticalCameraCreateSettings]
+The camera's settings define its behaviour regarding movement and rotation. These two are mostly driven by animation curves, value ranges and fade times.
 
-![alt text][TacticalCameraSettings]
+* Movement settings: how fast the camera can move at a certain height as well the range of height values the camera is allowed to reach.
+* Rotation settings: how fast the camera can look around as well as orbit around its focus point.
+* Tilt settings: tilt angle ranges for both low and high altitudes, and how these ranges should interpolate.
+* Field of view: should dynamic field of view be used, and how it should transition based on the camer'a height.
+* World interaction settings: filter and define the raycast interaction distance for height control and move-to-target.
 
-  * Movement settings. These settings relate to moving the camera around in the game world.
-    * The movement speed transition describes how the speed of the camera is affected by the camera's altitude. When at a high altitude, it may make more sense to move faster than when it is low to the ground to see all the details on the battlefield. If you like it to have a consistent speed at every altitude, make it a flat line from left to right.
-	* The movement fade describes how a movement value should smooth out when no input is given anylonger.
-	* The movement fade time defines how long this smoothing should take.
-	* The move to target position smoothing time defines how long the camera should smooth when it is moving to it's target destination, i.e. by double clicking on the terrain, it will move to that location.
-	* The height range defines the minimum _relative height_ and the _absolute maximum_ height. The minimum value is relative to the terrain or ground objects the camera is hovering over. For example, it will always keep a minimum altitude, even over some hills or mountains. The maximum value is absolute, so the camera will never go above that height in worldspace.
+### Input
 
-  * Pivot settings. These settings relate to the camera rotating around its local position.
-	* The max rotational speed is the maximum amount of degrees the camera can rotate per second.
-	* The rotational fade is the curve that defines the smoothing of the pivot manouvre after no input is given anymore.
-	* The rotational fade time is the amount of time this smoothing should happen.
+The camera's input provision can be integrated in your project's input system by implementing the `ITacticalCameraInputProvider` interface.
 
-  * Tilt settings. These settings relate to the range in which the camera can tile or tilt around its x axis. Based on the camera's altitude, the range in which it can tilt is modified. This allows to restrict the camera from looking too far down while near the ground and keeping the camera on the action at all times.
-	* Tilt range low: the range of angles (in degrees) the camera can look down while it is close to the ground.
-	* Tilt range high: the range of angles (in degrees) the camera can look down while it is up high.
-	* Tilt range transition: in what way should the transition of these range of values be interpolated. The left side is considered to be down low, while the right is considered to be up high.
+A default implementation is available for which you can assign custom input keys. Your custom implementation can be assigned to the `InputProvider` property, and can also be injected into it.
 
-  * World interaction settings. These settings relate to some aspects of how you set up your game world.
-	* Interaction mask: defines what layers of your game world are interesting for the camera to interact with. For example, or to let it determine what is ground level, the camera will shoot some rays into the world. Here you can set which layers should be considered to interact with. This can also help in optimizing performance when the camera is used in densly populated worlds.
-	* Max interaction ray length: to further help in getting great performance, restricitng the length of the raycasts helps in culling far away objects. Set this to a sensible length depending on how high your camera can go, and how far it can see in the distance, i.e. the far plane value of the camera component.
+### Area of operation
 
-## Custom input
+The camera's area of operation can be restricted using the `ITacticalCameraBounds` interface or `AbstractTacticalCameraBounds` abstract class. This allows you to implement custom area restrictions in your project, e.g. restricting in a polygon area, not entering the fog of war, etc.
 
-The `TacticalCameraInputProvider` is a sample implementation for providing input to the camera. It's great for demo or prototyping purposes. It impements the `ITacticalCameraInputProvider` interface and offers itself to the `TacticalCamera` script in its startup phase. In your project, it is best that you implement the `ITacticalCameraInputProvider` interface in your own input class(es) that reflects the way would like to control the camera (keyboard / mouse, gamepad, touch, ...) and offer it to the `TacticalCamera.InputProvider` property. You can, of course, look through the example code and merge it with your input structure.
+The bounds can be assigned through the Unity inspector view when being derived from `AbstractTacticalCameraBounds`, but can also be assigned to the `Bounds` property or be injected into it.
 
-## Area bounds
+### Gotcha's
 
-You can limit the `TacticalCamera`'s area of operation by assigning an `ITacticalCameraBounds` to its `Bounds` property. At the end of all its movement and rotation, if set, will let the boundary object know it is done, and should check whether it still within bounds. If not, it should put it back in. A sample implementation of limiting the camera is given by the `TacticalCameraBoxBounds`, which restricts the camera of operating within the area defined by the box.
+* The camera is designed to work on its own without interference on the rotation of the object from the outside, e.g. animations.
+* The `z`-value of the local Euler rotation angle is always set to 0 at the end of its `LateUpdate` phase. This is to prevent drift and keeps the camera straight.
+* The operating range of the tilt angle in the `TacticalCameraSettings` objects can be no larger than [-90, 90] degrees, with 0 being level with the horizon. This range is defined to prevent flipping over. If you make a custom implementation through `ITacticalCameraSettings`, best is to keep this in mind.
+* This package includes the [Impossible Odds Coding Toolkit](https://www.impossible-odds.net/unity-toolkit/). Feel free to use it!
 
+## Unity Version
 
-[TacticalCameraFeatures]: ./Documentation/img/Features.gif
-[TacticalCameraSetup]: ./Documentation/img/Setup.gif
-[TacticalCameraCreateSettings]: ./Documentation/img/CreateSettings.png
-[TacticalCameraSettings]: ./Documentation/img/Settings.png
+Developed and tested on Unity 2019.4 LTS.
+
+## License
+
+This package is provided under the [MIT][License] license.
+
+[License]: ./LICENSE.md
+[Logo]: ./ImpossibleOddsLogo.png

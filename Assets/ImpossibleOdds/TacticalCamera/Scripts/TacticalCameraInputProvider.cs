@@ -1,13 +1,13 @@
 ﻿namespace ImpossibleOdds.TacticalCamera
 {
+	using System.Collections;
 	using UnityEngine;
 
 	/// <summary>
 	/// A sample input implementation to provide input for the TacticalCamera.
 	/// The best approach is to implement the input provider interface in your own input manager, and use this class as a sample implementation of expected inputs.
 	/// </summary>
-	[RequireComponent(typeof(TacticalCamera))]
-	public class TacticalCameraInputProvider : MonoBehaviour, ITacticalCameraInputProvider
+	public class TacticalCameraInputProvider : AbstractTacticalCameraInputProvider, ITacticalCameraInputProvider
 	{
 		public const string DefaultMouseRotationAxis = "Mouse X";
 		public const string DefaultMouseTiltAxis = "Mouse Y";
@@ -23,8 +23,6 @@
 		private KeyCode moveRightKey = KeyCode.D;
 		[SerializeField, Tooltip("Key to orbit the camera around it's focus target.")]
 		private KeyCode orbitCamera = KeyCode.LeftShift;
-		[SerializeField, Range(0f, 1f), Min(0f), Tooltip("Time interval between mouse clicks to register it as a double-click.")]
-		private float doubleClickTime = 0.1f;
 		[SerializeField, Range(0f, 0.5f), Tooltip("Screen edge detection for moving the camera. Expressed in percentage of the screen.")]
 		private float screenBorderTrigger = 0f;
 		[SerializeField, Tooltip("Should movement be triggered by an off-screen mouse cursor?")]
@@ -49,28 +47,28 @@
 		private bool invertRotation = false;
 		[SerializeField, Tooltip("Invert the zoom value.")]
 		private bool invertZoom = true;
-		[SerializeField, Tooltip("Should the cursor be hidden when rotating the camera.")]
-		private bool hideCursorWhenRotating = true;
+		[SerializeField, Tooltip("Is the camera always rotating? If enabled, the camera will lock & hide the cursor permanently")]
+		private bool alwaysRotating = false;
 
-		private TacticalCamera tacticalCamera = null;
-		private TacticalCameraSettings settings = null;
-		private int lastCheckFrameCounter = 0;
-		private float firstClickTime = 0f;
-		private bool singleClicked = false;
-		private bool doubleClicked = false;
+		private Event latestEvent = null;
+		private bool rotationEnabled = false;
 
 		/// <inheritdoc />
-		public bool MoveToTarget
+		public override bool MoveToTarget
 		{
 			get
 			{
-				CheckDoubleClick();
-				return doubleClicked;
+				return
+					(latestEvent != null) &&
+					latestEvent.isMouse &&
+					(latestEvent.type == EventType.MouseDown) &&
+					(latestEvent.button == mouseMoveToPositionKey) &&
+					(latestEvent.clickCount == 2);
 			}
 		}
 
 		/// <inheritdoc/>
-		public bool CancelMoveToTarget
+		public override bool CancelMoveToTarget
 		{
 			get
 			{
@@ -79,13 +77,13 @@
 		}
 
 		/// <inheritdoc />
-		public bool OrbitAroundTarget
+		public override bool OrbitAroundTarget
 		{
 			get { return Input.GetKey(orbitCamera); }
 		}
 
 		/// <inheritdoc />
-		public float MoveForward
+		public override float MoveForward
 		{
 			get
 			{
@@ -118,18 +116,12 @@
 				}
 
 				value = Mathf.Clamp(value, -1f, 1f);
-
-				if (settings != null)
-				{
-					value *= tacticalCamera.MaxMovementSpeed;
-				}
-
 				return value;
 			}
 		}
 
 		/// <inheritdoc />
-		public float MoveSideways
+		public override float MoveSideways
 		{
 			get
 			{
@@ -162,18 +154,12 @@
 				}
 
 				value = Mathf.Clamp(value, -1f, 1f);
-
-				if (settings != null)
-				{
-					value *= tacticalCamera.MaxMovementSpeed;
-				}
-
 				return value;
 			}
 		}
 
 		/// <inheritdoc />
-		public float MoveUp
+		public override float MoveUp
 		{
 			get
 			{
@@ -189,15 +175,15 @@
 		}
 
 		/// <inheritdoc />
-		public float TiltDelta
+		public override float TiltDelta
 		{
 			get
 			{
 				float value = 0f;
 
-				if (Input.GetMouseButton(mouseRotationKey))
+				if (rotationEnabled)
 				{
-					value = Input.GetAxis(mouseTiltAxis);
+					value = Mathf.Clamp(Input.GetAxis(mouseTiltAxis), -1f, 1f);
 				}
 
 				if (invertTilt)
@@ -205,25 +191,20 @@
 					value *= -1f;
 				}
 
-				if (settings != null)
-				{
-					value *= settings.MaxRotationalSpeed;
-				}
-
 				return value;
 			}
 		}
 
 		/// <inheritdoc />
-		public float RotationDelta
+		public override float RotationDelta
 		{
 			get
 			{
 				float value = 0f;
 
-				if (Input.GetMouseButton(mouseRotationKey))
+				if (rotationEnabled)
 				{
-					value = Input.GetAxis(mouseRotationAxis);
+					value = Mathf.Clamp(Input.GetAxis(mouseRotationAxis), -1f, 1f);
 				}
 
 				if (invertRotation)
@@ -231,91 +212,56 @@
 					value *= -1f;
 				}
 
-				if (settings != null)
-				{
-					value *= settings.MaxRotationalSpeed;
-				}
-
 				return value;
 			}
 		}
 
-		private void Start()
+		private void OnEnable()
 		{
-			tacticalCamera = GetComponent<TacticalCamera>();
-			tacticalCamera.InputProvider = this;
-			settings = tacticalCamera.Settings;
+			if (alwaysRotating)
+			{
+				Cursor.visible = false;
+				Cursor.lockState = CursorLockMode.Locked;
+				rotationEnabled = true;
+			}
 		}
 
-		private void Update()
+		private void OnGUI()
 		{
-			CheckDoubleClick();
+			latestEvent = Event.current;
 			CheckMouseCursor();
 		}
 
 		private void CheckMouseCursor()
 		{
-			if (!hideCursorWhenRotating)
+			if (alwaysRotating || (latestEvent == null) || !latestEvent.isMouse)
 			{
 				return;
 			}
 
-			if (Input.GetMouseButtonDown(mouseRotationKey))
+			if ((latestEvent.type == EventType.MouseDown) && (latestEvent.button == mouseRotationKey))
 			{
 				Cursor.visible = false;
 				Cursor.lockState = CursorLockMode.Locked;
+				rotationEnabled = false;
+				StartCoroutine(RoutineWaitForDrag());   // Prevent spike in mouse input
 			}
-			else if (Input.GetMouseButtonUp(mouseRotationKey))
+			else if ((latestEvent.type == EventType.MouseUp) && (latestEvent.button == mouseRotationKey))
 			{
 				Cursor.visible = true;
 				Cursor.lockState = CursorLockMode.None;
+				rotationEnabled = false;
 			}
 		}
 
-		private void CheckDoubleClick()
+		private IEnumerator RoutineWaitForDrag()
 		{
-			if (lastCheckFrameCounter == Time.frameCount)
-			{
-				return;
-			}
+			yield return new WaitWhile(() =>
+				(Cursor.lockState == CursorLockMode.Locked) &&
+				((Mathf.Abs(Input.GetAxis(mouseTiltAxis)) > 0f) || (Mathf.Abs(Input.GetAxis(mouseRotationAxis)) > 0f)));
 
-			lastCheckFrameCounter = Time.frameCount;
-
-			// If the button has not been pressed
-			if (!Input.GetMouseButtonDown(mouseMoveToPositionKey))
-			{
-				// If we single clicked, but the double click time has already expired, we reset
-				if (singleClicked && !ClickedWithinTimeLimit())
-				{
-					singleClicked = false;
-					firstClickTime = 0f;
-				}
-
-				if (doubleClicked)
-				{
-					doubleClicked = false;
-				}
-			}
-			else
-			{
-				// If we haven't clicked a first time, or not clicked within the time limit, register it as a first click.
-				// Else, we've registered a double click.
-				if (!singleClicked || !ClickedWithinTimeLimit())
-				{
-					singleClicked = true;
-					firstClickTime = Time.timeSinceLevelLoad;
-					doubleClicked = false;
-				}
-				else
-				{
-					doubleClicked = true;
-				}
-			}
-		}
-
-		private bool ClickedWithinTimeLimit()
-		{
-			return (firstClickTime + doubleClickTime) > Time.timeSinceLevelLoad;
+			yield return null;
+			rotationEnabled = true;
 		}
 	}
 }

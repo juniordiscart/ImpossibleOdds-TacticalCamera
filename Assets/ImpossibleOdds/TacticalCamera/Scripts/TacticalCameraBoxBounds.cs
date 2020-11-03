@@ -5,8 +5,7 @@
 	/// <summary>
 	/// Restricts the camera's position within an axis-aligned bounding box.
 	/// </summary>
-	[RequireComponent(typeof(TacticalCamera))]
-	public class TacticalCameraBoxBounds : MonoBehaviour, ITacticalCameraBounds
+	public class TacticalCameraBoxBounds : AbstractTacticalCameraBounds, ITacticalCameraBounds
 	{
 		[SerializeField, Tooltip("Axis-aligned bounding box that determines the camera's area to move in.")]
 		private Bounds boundingBox = new Bounds(Vector3.zero, Vector3.one);
@@ -17,21 +16,13 @@
 			set { boundingBox = value; }
 		}
 
-		/// <summary>
-		/// Restirct the camera within the defined
-		/// </summary>
-		public void Apply()
+		/// <inheritdoc />
+		public override void Apply(TacticalCamera tCamera)
 		{
-			Vector3 position = transform.position;
-			if (!boundingBox.Contains(position))
+			if (!boundingBox.Contains(tCamera.transform.position))
 			{
-				transform.position = boundingBox.ClosestPoint(position);
+				tCamera.transform.position = boundingBox.ClosestPoint(tCamera.transform.position);
 			}
-		}
-
-		private void Start()
-		{
-			GetComponent<TacticalCamera>().Bounds = this;
 		}
 
 		private void OnDrawGizmosSelected()
