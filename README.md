@@ -16,11 +16,14 @@ The `TacticalCamera` package provides a camera system for smoothly navigating yo
 
 It's also designed to have minimal setup and integrate well in existing projects.
 
+[![Impossible Odds - Tactical Camera](http://img.youtube.com/vi/X4F_rTh-dkQ/0.jpg)](https://youtu.be/X4F_rTh-dkQ "Impossible Odds - Tactical Camera")
+
 ## Setting up the camera
 
 The `TacticalCamera` Component requires to be put on your `Camera` GameObject. It will also use a `CharacterController` which is added automatically (if not there already) to resolve collisions as well as smoothly go over any terrain and obstacles.
 
 It requires two things to operate:
+
 * An input provider: the `TacticalCameraInputProvider` Component is a sample implementation which is perfect for testing and quick setup.
 * Animation settings: create an instance of the `TacticalCameraSettings` ScriptableObject. Adjust these to define how your camera should animate and smooth out.
 
@@ -55,7 +58,7 @@ The bounds can be assigned through the Unity inspector view when being derived f
 ### Gotcha's
 
 * The camera is designed to work on its own without interference on the rotation of the object from the outside, e.g. animations.
-* The `z`-value of the local Euler rotation angle is always set to 0 at the end of its `LateUpdate` phase. This is to prevent drift and keeps the camera straight.
+* The `z`-value of the local Euler rotation angle is always set to 0 at the end of its `LateUpdate` phase. This is to prevent drift and keeps the camera straight up.
 * The operating range of the tilt angle in the `TacticalCameraSettings` objects can be no larger than [-90, 90] degrees, with 0 being level with the horizon. This range is defined to prevent flipping over. If you make a custom implementation through `ITacticalCameraSettings`, best is to keep this in mind.
 * This package includes the [Impossible Odds Coding Toolkit](https://www.impossible-odds.net/unity-toolkit/). Feel free to use it!
 

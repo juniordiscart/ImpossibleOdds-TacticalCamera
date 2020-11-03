@@ -21,12 +21,14 @@
 		private ITacticalCameraInputProvider inputProvider = null;
 		private ITacticalCameraBounds bounds = null;
 
+		private new Camera camera = null;
+		private CharacterController characterController = null;
+
 		private ValueRange operatingHeightRange = new ValueRange();
 		private ValueRange operatingTiltRange = new ValueRange();
 		private float tiltFactor = 0f;  // Factor that keeps track of the tilt in the operating tilt range. For smooth angle adjustment when moving vertically.
-
-		private new Camera camera = null;
-		private CharacterController characterController = null;
+		private bool isOrbiting = false;
+		private Vector3 orbitPoint = Vector3.zero;
 
 		private Coroutine moveToPositionHandle = null;
 		private Coroutine monitorTiltAngleHandle = null;
@@ -211,6 +213,9 @@
 			StopRoutine(ref moveToPositionHandle);
 			StopRoutine(ref monitorTiltAngleHandle);
 			StopRoutine(ref dynamicFieldOfViewHandle);
+
+			isOrbiting = false;
+			orbitPoint = Vector3.zero;
 		}
 
 		private void LateUpdate()
@@ -378,15 +383,31 @@
 		{
 			if (rotationState.IsActive)
 			{
-				if (inputProvider.OrbitAroundTarget && Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
+				if (inputProvider.OrbitAroundTarget)
 				{
-					// Rotation - Rotate horizontally around the focus point
-					transform.RotateAround(hit.point, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime);
+					if (!isOrbiting && Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
+					{
+						orbitPoint = hit.point;
+						isOrbiting = true;
+					}
+
+					if (isOrbiting)
+					{
+						// Rotation - Rotate horizontally around the focus point
+						transform.RotateAround(orbitPoint, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime);
+
+					}
+					else
+					{
+						// Rotation - Rotate around the world up vector
+						transform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
+					}
 				}
 				else
 				{
 					// Rotation - Rotate around the world up vector
 					transform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
+					isOrbiting = false;
 				}
 			}
 
