@@ -16,7 +16,7 @@ The `TacticalCamera` package provides a camera system for smoothly navigating yo
 
 It's also designed to have minimal setup and integrate well in existing projects.
 
-[![Impossible Odds - Tactical Camera](http://img.youtube.com/vi/X4F_rTh-dkQ/0.jpg)](https://youtu.be/X4F_rTh-dkQ "Impossible Odds - Tactical Camera")
+[![Impossible Odds - Tactical Camera][Video]](https://youtu.be/X4F_rTh-dkQ "Impossible Odds - Tactical Camera")
 
 ## Setting up the camera
 
@@ -72,4 +72,5 @@ This package is provided under the [MIT][License] license.
 
 [License]: ./LICENSE.md
 [Toolkit]: https://github.com/juniordiscart/ImpossibleOdds-Toolkit
+[Video]: http://img.youtube.com/vi/X4F_rTh-dkQ/0.jpg
 [Logo]: ./ImpossibleOddsLogo.png
