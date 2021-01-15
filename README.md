@@ -40,7 +40,7 @@ The camera's settings define its behaviour regarding movement and rotation. Thes
 * Movement settings: how fast the camera can move at a certain height as well the range of height values the camera is allowed to reach.
 * Rotation settings: how fast the camera can look around as well as orbit around its focus point.
 * Tilt settings: tilt angle ranges for both low and high altitudes, and how these ranges should interpolate.
-* Field of view: should dynamic field of view be used, and how it should transition based on the camer'a height.
+* Field of view: should dynamic field of view be used, and how it should transition based on the camera's height.
 * World interaction settings: filter and define the raycast interaction distance for height control and move-to-target.
 
 ### Input
@@ -60,7 +60,7 @@ The bounds can be assigned through the Unity inspector view when being derived f
 * The camera is designed to work on its own without interference on the rotation of the object from the outside, e.g. animations.
 * The `z`-value of the local Euler rotation angle is always set to 0 at the end of its `LateUpdate` phase. This is to prevent drift and keeps the camera straight up.
 * The operating range of the tilt angle in the `TacticalCameraSettings` objects can be no larger than [-90, 90] degrees, with 0 being level with the horizon. This range is defined to prevent flipping over. If you make a custom implementation through `ITacticalCameraSettings`, best is to keep this in mind.
-* This package includes the [Impossible Odds Coding Toolkit](https://www.impossible-odds.net/unity-toolkit/). Feel free to use it!
+* This package includes the [Impossible Odds Coding Toolkit][Toolkit]. Feel free to use it!
 
 ## Unity Version
 
@@ -71,4 +71,5 @@ Developed and tested on Unity 2019.4 LTS.
 This package is provided under the [MIT][License] license.
 
 [License]: ./LICENSE.md
+[Toolkit]: https://github.com/juniordiscart/ImpossibleOdds-Toolkit
 [Logo]: ./ImpossibleOddsLogo.png
