@@ -7,7 +7,7 @@
 
 	using ImpossibleOdds.DependencyInjection;
 
-	[RequireComponent(typeof(CharacterController), typeof(Camera))]
+	[Injectable, RequireComponent(typeof(CharacterController), typeof(Camera))]
 	public class TacticalCamera : MonoBehaviour
 	{
 		[SerializeField, Tooltip("(Optional) - Initial settings if no other settings are provided.")]
