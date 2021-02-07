@@ -1,5 +1,6 @@
 ﻿namespace ImpossibleOdds.TacticalCamera
 {
+	using System;
 	using UnityEngine;
 
 	/// <summary>
@@ -10,7 +11,7 @@
 		private float time = 0f;
 		private float fadeTime = 0f;
 		private float fadeValue = 0f;
-		private AnimationCurve fadeCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+		private Func<float, float> fadeEvaluation = null;
 
 		public float Time
 		{
@@ -23,7 +24,7 @@
 			get
 			{
 				float t = Mathf.InverseLerp(fadeTime, 0f, time);
-				return fadeCurve.Evaluate(t) * fadeValue;
+				return fadeEvaluation(t) * fadeValue;
 			}
 		}
 
@@ -51,10 +52,10 @@
 			}
 		}
 
-		public AnimationCurve FadeCurve
+		public Func<float, float> FadeEvaluation
 		{
-			get { return fadeCurve; }
-			set { fadeCurve = value; }
+			get { return fadeEvaluation; }
+			set { fadeEvaluation = value; }
 		}
 
 		public bool IsActive
@@ -78,10 +79,10 @@
 			return Value;
 		}
 
-		public void ApplySettings(float fadeTime, AnimationCurve fadeCurve)
+		public void ApplySettings(float fadeTime, Func<float, float> fadeEvaluation)
 		{
 			this.fadeTime = fadeTime;
-			this.fadeCurve = fadeCurve;
+			this.fadeEvaluation = fadeEvaluation;
 			time = 0f;
 			fadeValue = 0f;
 		}

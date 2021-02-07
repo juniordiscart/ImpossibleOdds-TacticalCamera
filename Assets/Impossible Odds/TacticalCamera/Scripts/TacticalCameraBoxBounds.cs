@@ -8,7 +8,7 @@
 	public class TacticalCameraBoxBounds : AbstractTacticalCameraBounds, ITacticalCameraBounds
 	{
 		[SerializeField, Tooltip("Axis-aligned bounding box that determines the camera's area to move in.")]
-		private Bounds boundingBox = new Bounds(Vector3.zero, Vector3.one);
+		private Bounds boundingBox = new Bounds(Vector3.zero, Vector3.one * 100f);
 
 		public Bounds Bounds
 		{

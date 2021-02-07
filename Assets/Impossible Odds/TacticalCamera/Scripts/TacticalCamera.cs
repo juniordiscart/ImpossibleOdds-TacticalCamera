@@ -10,11 +10,11 @@
 	[Injectable, RequireComponent(typeof(CharacterController), typeof(Camera))]
 	public class TacticalCamera : MonoBehaviour
 	{
-		[SerializeField, Tooltip("(Optional) - Initial settings if no other settings are provided.")]
+		[SerializeField, Tooltip("Initial settings if no other settings are provided through other means.")]
 		private TacticalCameraSettings initialSettings = null;
-		[SerializeField, Tooltip("(Optional) - Initial input provider if no other input provider is provided.")]
+		[SerializeField, Tooltip("Initial input provider if no other input provider is provided through other means.")]
 		private AbstractTacticalCameraInputProvider initialInputProvider = null;
-		[SerializeField, Tooltip("(Optional) - Initial camera bounds if no other bounds are provided.")]
+		[SerializeField, Tooltip("(Optional) - Initial camera bounds if no other bounds are provided through other means.")]
 		private AbstractTacticalCameraBounds initialCameraBounds = null;
 
 		private ITacticalCameraSettings settings = null;
@@ -92,8 +92,9 @@
 					return 0f;
 				}
 
-				float speedT = Mathf.Clamp01(operatingHeightRange.InverseLerp(CurrentHeight));
-				return settings.MovementSpeedTransition.Evaluate(speedT);
+				float t = Mathf.Clamp01(operatingHeightRange.InverseLerp(CurrentHeight));
+				t = settings.EvaluateMovementTransition(t);
+				return settings.MovementSpeedRange.Lerp(t);
 			}
 		}
 
@@ -192,7 +193,7 @@
 			if (settings.UseDynamicFieldOfView)
 			{
 				float t = operatingHeightRange.InverseLerp(CurrentHeight);
-				camera.fieldOfView = settings.DynamicFieldOfViewRange.Lerp(settings.DynamicFieldOfViewTransition.Evaluate(t));
+				camera.fieldOfView = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
 			}
 
 			if (monitorTiltAngleHandle == null)
@@ -245,15 +246,13 @@
 				return;
 			}
 
-			moveForwardsState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
-			moveSidewaysState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
-			moveUpwardsState.ApplySettings(settings.MovementFadeTime, settings.MovementFadeCurve);
-			tiltState.ApplySettings(settings.RotationalFadeTime, settings.RotationalFadeCurve);
-			rotationState.ApplySettings(settings.RotationalFadeTime, settings.RotationalFadeCurve);
+			moveForwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
+			moveSidewaysState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
+			moveUpwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
+			tiltState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut);
+			rotationState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut);
 			characterController.radius = settings.InteractionBubbleRadius;
 			characterController.height = settings.InteractionBubbleRadius;
-
-
 
 			if (monitorTiltAngleHandle == null)
 			{
@@ -537,7 +536,7 @@
 				// over its limits, then move it towards it's target range.
 				float t = operatingHeightRange.InverseLerp(CurrentHeight);
 				t = Mathf.Clamp01(t);
-				t = settings.TiltRangeTransition.Evaluate(t);
+				t = settings.EvaluateTiltTransition(t);
 				ValueRange targetRange = ValueRange.Lerp(settings.TiltRangeLow, settings.TiltRangeHigh, t);
 				operatingTiltRange.Set(
 					Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowVelocity, 0.2f),
@@ -559,7 +558,7 @@
 				if ((settings != null) && settings.UseDynamicFieldOfView)
 				{
 					float t = operatingHeightRange.InverseLerp(CurrentHeight);
-					float target = settings.DynamicFieldOfViewRange.Lerp(settings.DynamicFieldOfViewTransition.Evaluate(t));
+					float target = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
 					camera.fieldOfView = Mathf.SmoothDamp(camera.fieldOfView, target, ref velocity, 0.2f);
 				}
 

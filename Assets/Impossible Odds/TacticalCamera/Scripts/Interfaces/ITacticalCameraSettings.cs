@@ -22,18 +22,18 @@
 		}
 
 		/// <summary>
-		/// Curve that defines the speed of the camera depending on its altitude.
+		/// The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.
 		/// </summary>
-		AnimationCurve MovementSpeedTransition
+		ValueRange AbsoluteHeightRange
 		{
 			get;
 			set;
 		}
 
 		/// <summary>
-		/// Fade curve for movement.
+		/// The range of movement speed values for the camera, depending on the height it's operating at.
 		/// </summary>
-		AnimationCurve MovementFadeCurve
+		ValueRange MovementSpeedRange
 		{
 			get;
 			set;
@@ -58,27 +58,9 @@
 		}
 
 		/// <summary>
-		/// The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.
-		/// </summary>
-		ValueRange AbsoluteHeightRange
-		{
-			get;
-			set;
-		}
-
-		/// <summary>
 		/// Maximum speed at which the camera will pivot around its origin. (In degrees per second)
 		/// </summary>
 		float MaxRotationalSpeed
-		{
-			get;
-			set;
-		}
-
-		/// <summary>
-		/// Fade curve for pivotal rotation.
-		/// </summary>
-		AnimationCurve RotationalFadeCurve
 		{
 			get;
 			set;
@@ -112,15 +94,6 @@
 		}
 
 		/// <summary>
-		/// Transition of tilt ranges from low to high.
-		/// </summary>
-		AnimationCurve TiltRangeTransition
-		{
-			get;
-			set;
-		}
-
-		/// <summary>
 		/// Should the tactical camera apply a dynamic field-of-view based on its height range?
 		/// </summary>
 		bool UseDynamicFieldOfView
@@ -133,15 +106,6 @@
 		/// The range of field-of-view values for the camera, depending on the height it's operating at.
 		/// </summary>
 		ValueRange DynamicFieldOfViewRange
-		{
-			get;
-			set;
-		}
-
-		/// <summary>
-		/// The transition of the field-of-view value from the lowest operating height to the highest operating height.
-		/// </summary>
-		AnimationCurve DynamicFieldOfViewTransition
 		{
 			get;
 			set;
@@ -173,5 +137,39 @@
 			get;
 			set;
 		}
+
+		/// <summary>
+		/// Evaluate how the movement fades out when no more input is given.
+		/// </summary>
+		/// <param name="t">Value between 0 and 1.</param>
+		/// <returns>The fade factor to be applied to the movement speed.</returns>
+		float EvaluateMovementFadeOut(float t);
+		/// <summary>
+		/// Evaluate how the rotation fades out when no more input is given.
+		/// </summary>
+		/// <param name="t">Value between 0 and 1.</param>
+		/// <returns>The fade factor to be applied to the rotational speed.</returns>
+		float EvaluateRotationFadeOut(float t);
+		/// <summary>
+		/// Evaluate how the movement speed should change based on the relative height of the camera,
+		/// with 0 defined at the lowest operating point and 1 at the highest.
+		/// </summary>
+		/// <param name="t">Value between 0 and 1.</param>
+		/// <returns>The desired interpolated value for the movement speed transition.</returns>
+		float EvaluateMovementTransition(float t);
+		/// <summary>
+		/// Evaluate how the tilt range should change based on the relative height of the camera,
+		/// with 0 defined at the lowest operating point and 1 at the highest.
+		/// </summary>
+		/// <param name="t">Value between 0 and 1.</param>
+		/// <returns>The desired interpolated value for the tilt range transition.</returns>
+		float EvaluateTiltTransition(float t);
+		/// <summary>
+		/// Evaluate how the field of view should change based on the relative height of the camera,
+		/// with 0 defined at the lowest operating point and 1 at the highest.
+		/// </summary>
+		/// <param name="t">Value between 0 and 1.</param>
+		/// <returns>The desired interpolated value for the field of view transition.</returns>
+		float EvaluateFieldOfViewTransition(float t);
 	}
 }

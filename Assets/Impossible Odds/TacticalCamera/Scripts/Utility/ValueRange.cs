@@ -35,6 +35,12 @@
 		[SerializeField]
 		private float max;
 
+		public ValueRange(float min, float max)
+		{
+			this.min = Mathf.Min(min, max);
+			this.max = Mathf.Max(min, max);
+		}
+
 		public static ValueRange Lerp(ValueRange a, ValueRange b, float t)
 		{
 			ValueRange result = new ValueRange();

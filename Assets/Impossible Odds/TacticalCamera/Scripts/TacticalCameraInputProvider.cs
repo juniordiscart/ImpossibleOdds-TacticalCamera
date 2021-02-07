@@ -12,6 +12,13 @@
 		public const string DefaultMouseRotationAxis = "Mouse X";
 		public const string DefaultMouseTiltAxis = "Mouse Y";
 
+		public enum MouseKeys : int
+		{
+			Left = 0,
+			Right = 1,
+			Middle = 2
+		}
+
 		[Header("Movement")]
 		[SerializeField, Tooltip("Key to move the camera forwards.")]
 		private KeyCode moveForwardKey = KeyCode.W;
@@ -21,7 +28,7 @@
 		private KeyCode moveLeftKey = KeyCode.A;
 		[SerializeField, Tooltip("Key to move the camera to the right.")]
 		private KeyCode moveRightKey = KeyCode.D;
-		[SerializeField, Tooltip("Key to orbit the camera around it's focus target.")]
+		[SerializeField, Tooltip("Key to orbit the camera around it's focus target. Hold down to activate orbiting.")]
 		private KeyCode orbitCamera = KeyCode.LeftShift;
 		[SerializeField, Range(0f, 0.5f), Tooltip("Screen edge detection for moving the camera. Expressed in percentage of the screen.")]
 		private float screenBorderTrigger = 0f;
@@ -31,10 +38,10 @@
 		private float scrollSensitivityFactor = 100f;
 
 		[Header("Rotation")]
-		[SerializeField, Range(0, 1), Min(0), Tooltip("The mouse button that's used to move the camera to a position.")]
-		private int mouseMoveToPositionKey = 0;
-		[SerializeField, Range(0, 1), Min(0), Tooltip("The mouse button that's used to rotate the camera.")]
-		private int mouseRotationKey = 1;
+		[SerializeField, Tooltip("The mouse button that's used to move the camera to a position. Double click to move to the target position.")]
+		private MouseKeys mouseMoveToPositionKey = MouseKeys.Left;
+		[SerializeField, Tooltip("The mouse button that's used to rotate the camera.")]
+		private MouseKeys mouseRotationKey = MouseKeys.Right;
 		[SerializeField, Tooltip("The mouse axis that is used for tilting the camera up/down.")]
 		private string mouseTiltAxis = DefaultMouseTiltAxis;
 		[SerializeField, Tooltip("The mouse axis that is used for rotating the camera in the XZ-plane.")]
@@ -47,7 +54,7 @@
 		private bool invertRotation = false;
 		[SerializeField, Tooltip("Invert the zoom value.")]
 		private bool invertZoom = true;
-		[SerializeField, Tooltip("Is the camera always rotating? If enabled, the camera will lock & hide the cursor permanently")]
+		[SerializeField, Tooltip("Is the camera always rotating? If enabled, the camera will lock & hide the cursor.")]
 		private bool alwaysRotating = false;
 
 		private Event latestEvent = null;
@@ -62,7 +69,7 @@
 					(latestEvent != null) &&
 					latestEvent.isMouse &&
 					(latestEvent.type == EventType.MouseDown) &&
-					(latestEvent.button == mouseMoveToPositionKey) &&
+					(latestEvent.button == (int)mouseMoveToPositionKey) &&
 					(latestEvent.clickCount == 2);
 			}
 		}
@@ -239,14 +246,14 @@
 				return;
 			}
 
-			if ((latestEvent.type == EventType.MouseDown) && (latestEvent.button == mouseRotationKey))
+			if ((latestEvent.type == EventType.MouseDown) && (latestEvent.button == (int)mouseRotationKey))
 			{
 				Cursor.visible = false;
 				Cursor.lockState = CursorLockMode.Locked;
 				rotationEnabled = false;
 				StartCoroutine(RoutineWaitForDrag());   // Prevent spike in mouse input
 			}
-			else if ((latestEvent.type == EventType.MouseUp) && (latestEvent.button == mouseRotationKey))
+			else if ((latestEvent.type == EventType.MouseUp) && (latestEvent.button == (int)mouseRotationKey))
 			{
 				Cursor.visible = true;
 				Cursor.lockState = CursorLockMode.None;
