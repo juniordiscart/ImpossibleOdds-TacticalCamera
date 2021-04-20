@@ -149,6 +149,16 @@
 			}
 		}
 
+		/// <summary>
+		/// Moves the camera over to the target position. Note that the camera will only move over the XZ-plane.
+		/// </summary>
+		/// <param name="targetPosition">Target position for the camera to move to.</param>
+		public void MoveToTarget(Vector3 targetPosition)
+		{
+			StopRoutine(ref moveToPositionHandle);
+			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
+		}
+
 		private void Awake()
 		{
 			characterController = GetComponent<CharacterController>();
@@ -481,12 +491,6 @@
 
 		private void MoveToTarget()
 		{
-			if (moveToPositionHandle != null)
-			{
-				StopCoroutine(moveToPositionHandle);
-				moveToPositionHandle = null;
-			}
-
 			RaycastHit hitInfo;
 			Ray direction = Camera.main.ScreenPointToRay(Input.mousePosition);
 			if (!Physics.Raycast(direction, out hitInfo, float.MaxValue, settings.InteractionMask, QueryTriggerInteraction.Ignore))
@@ -495,7 +499,7 @@
 			}
 
 			Vector3 targetPosition = hitInfo.point;
-			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
+			MoveToTarget(targetPosition);
 		}
 
 		private void StopRoutine(ref Coroutine handle)
