@@ -13,6 +13,8 @@ You can expect to find the following set of features in this plugin:
 * Extensive customization of behaviour through simple animation curves.
 * Minimal setup and easy integration.
 
+You can view a quick demo video of this plugin below.
+
 [![Impossible Odds - Tactical Camera][Video]](http://www.youtube.com/watch?v=zZN0o4BFEZY "Impossible Odds - Tactical Camera")
 
 ## Quick Camera Setup
@@ -101,17 +103,17 @@ Most of these properties are self-explanatory, but the purpose of the of _evalua
 
 In most situations it's desirable to restrict the camera to a specific area so that it can't wander off in areas not meant for the players to visit. The Tactical Camera can equipped with some bounds that force it to be in a particular area.
 
-How such an area is defined is very project-dependent and could become complex. For example, polygonal level bounds in case the map is not just a square, or a fog-of-war restriction where undiscovered pieces of the map may not be looked over yet.
+How such an area is defined is very project-dependent and could become a complex matter. For example, polygonal level bounds in case the map is not just a square, or a fog-of-war restriction where undiscovered pieces of the map may not be accessible yet.
 
-To give a basic form of restriction already, the `TacticalCameraBoxBounds` component can restrict the camera to an _axis-aligned_ box. Whenever it tries to leave that defined area, its position is reset to the nearest valid location again inside.
+To give a basic form of restriction already, the `TacticalCameraBoxBounds` component can restrict the Tactical Camera's position to an _axis-aligned_ box. Whenever it tries to leave the area, its position is reset to the nearest valid location inside the box.
 
 ![Box Bounds][BoxBounds]
 
 #### Area of Operation - Advanced
 
-To have the Tactical Camera be restricted to more complex-shaped areas, have your restriction tool implement the `ITacticalCameraBounds` interface. This has a single `Apply` method which it will call each time after it has done moving.
+To have the Tactical Camera be restricted to more complex areas, have your restriction tool implement the `ITacticalCameraBounds` interface. This has a single `Apply` method which will get called by the Tactical Camera once it has done moving.
 
-In your custom implementation, this `Apply` method should check whether the camera is still in a valid location, and if not, place it somewhere that is. Preferably this would be the closest valid point to minimise the distance which could create weird visual jumps otherwise.
+Your implementation of this `Apply` method should check whether the camera is still in a valid location, and if not, place it somewhere that is. Preferably this would be the closest valid point inside to minimise the distance which would otherwise create weird visual jumps.
 
 ## Dependency Injection
 

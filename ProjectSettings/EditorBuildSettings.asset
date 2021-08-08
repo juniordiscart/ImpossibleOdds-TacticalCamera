@@ -4,5 +4,14 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Demo/TacticalCameraDemo.unity
+    guid: 12dd7bb27c47ea1458c8d4ecd98af2cc
+  - enabled: 1
+    path: 
+    guid: ae827b0911ccdd146ac15e245084bd91
+  - enabled: 1
+    path: Assets/test.unity
+    guid: f80120f566ee76c439ac27443e8f9095
   m_configObjects: {}

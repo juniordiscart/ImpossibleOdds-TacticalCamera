@@ -76,18 +76,18 @@
 		}
 
 		/// <summary>
-		/// Range in which the camera can tilt when it is up high. (In degrees)
+		/// Range in which the camera can tilt when it is down low. (In degrees)
 		/// </summary>
-		ValueRange TiltRangeHigh
+		ValueRange TiltRangeLow
 		{
 			get;
 			set;
 		}
 
 		/// <summary>
-		/// Range in which the camera can tilt when it is down low. (In degrees)
+		/// Range in which the camera can tilt when it is up high. (In degrees)
 		/// </summary>
-		ValueRange TiltRangeLow
+		ValueRange TiltRangeHigh
 		{
 			get;
 			set;

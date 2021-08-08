@@ -159,6 +159,17 @@
 			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
 		}
 
+		/// <summary>
+		/// Cancels the move-to-target routine, if it was running.
+		/// </summary>
+		public void CancelMoveToTarget()
+		{
+			if (moveToPositionHandle != null)
+			{
+				StopRoutine(ref moveToPositionHandle);
+			}
+		}
+
 		private void Awake()
 		{
 			characterController = GetComponent<CharacterController>();
@@ -320,8 +331,7 @@
 			// If moving to a focus point and the animation is requested to be cancelled.
 			if ((moveToPositionHandle != null) && inputProvider.CancelMoveToTarget)
 			{
-				StopCoroutine(moveToPositionHandle);
-				moveToPositionHandle = null;
+				CancelMoveToTarget();
 			}
 			else if (inputProvider.MoveToTarget)
 			{
