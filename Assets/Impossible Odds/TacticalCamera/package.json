@@ -1,0 +1,22 @@
+{
+	"name": "com.impossibleodds.tacticalcamera",
+	"version": "2.1.0",
+	"displayName": "Impossible Odds - Tactical Camera",
+	"unity": "2019.4",
+	"documentationUrl": "https://github.com/juniordiscart/ImpossibleOdds-TacticalCamera/blob/master/README.md",
+	"licensesUrl": "https://github.com/juniordiscart/ImpossibleOdds-TacticalCamera/blob/master/LICENSE.md",
+	"description": "The Impossible Odds Tactical Camera package provides a plugin camera system for smoothly navigating your environments in both a top-down tactical view as well as up-close action scenes.",
+	"keywords": [
+		"csharp",
+		"unity",
+		"unity3d",
+		"game-development",
+		"camera",
+		"plugin"
+	],
+	"author": {
+		"name": "Jan Discart",
+		"email": "jan.discart@impossible-odds.net",
+		"url": "https://www.impossible-odds.net"
+	}
+}

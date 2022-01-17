@@ -1,8 +1,8 @@
 {
     "name": "ImpossibleOddsTacticalCamera",
     "references": [
-        "GUID:654c277d43e044d08910e69326bc4db4",
-        "GUID:4770cac66e3404483a2d9621a1c054e9"
+        "ImpossibleOdds.DependencyInjection",
+        "ImpossibleOdds.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
