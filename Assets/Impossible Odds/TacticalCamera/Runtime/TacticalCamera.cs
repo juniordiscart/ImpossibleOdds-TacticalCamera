@@ -1,45 +1,47 @@
-﻿namespace ImpossibleOdds.TacticalCamera
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using ImpossibleOdds.DependencyInjection;
+using UnityEngine;
+
+namespace ImpossibleOdds.TacticalCamera
 {
-	using System;
-	using System.Collections;
-	using System.Collections.Generic;
-	using UnityEngine;
-
-	using ImpossibleOdds.DependencyInjection;
-
 	[Injectable, RequireComponent(typeof(CharacterController), typeof(Camera))]
 	public class TacticalCamera : MonoBehaviour
 	{
+		/// <summary>
+		/// Called when no valid target position could be determined to move the camera to.
+		/// </summary>
+		public event Action onMoveToTargetFailed;
+		
 		[SerializeField, Tooltip("Initial settings if no other settings are provided through other means.")]
-		private TacticalCameraSettings initialSettings = null;
+		private TacticalCameraSettings initialSettings;
 		[SerializeField, Tooltip("Initial input provider if no other input provider is provided through other means.")]
-		private AbstractTacticalCameraInputProvider initialInputProvider = null;
+		private AbstractTacticalCameraInputProvider initialInputProvider;
 		[SerializeField, Tooltip("(Optional) - Initial camera bounds if no other bounds are provided through other means.")]
-		private AbstractTacticalCameraBounds initialCameraBounds = null;
+		private AbstractTacticalCameraBounds initialCameraBounds;
 
-		private ITacticalCameraSettings settings = null;
-		private ITacticalCameraInputProvider inputProvider = null;
-		private ITacticalCameraBounds bounds = null;
+		private ITacticalCameraSettings settings;
 
-		private new Camera camera = null;
-		private CharacterController characterController = null;
+		private Transform cachedTransform;
+		private Camera cachedCamera;
+		private CharacterController characterController;
 
-		private ValueRange operatingHeightRange = new ValueRange();
-		private ValueRange operatingTiltRange = new ValueRange();
-		private float tiltFactor = 0f;  // Factor that keeps track of the tilt in the operating tilt range. For smooth angle adjustment when moving vertically.
-		private bool isOrbiting = false;
-		private Vector3 orbitPoint = Vector3.zero;
+		private ValueRange operatingHeightRange;
+		private ValueRange operatingTiltRange;
+		private float tiltFactor;  // Factor that keeps track of the tilt in the operating tilt range. For smooth angle adjustment when moving vertically.
+		private float tiltLowSpeed;
+		private float tiltHighSpeed;
+		private float fovSpeed;
 
-		private Coroutine moveToPositionHandle = null;
-		private Coroutine monitorTiltAngleHandle = null;
-		private Coroutine dynamicFieldOfViewHandle = null;
+		private Coroutine moveToPositionHandle;
 
-		private FadeState moveForwardsState = new FadeState();
-		private FadeState moveSidewaysState = new FadeState();
-		private FadeState moveUpwardsState = new FadeState();
-		private FadeState tiltState = new FadeState();
-		private FadeState rotationState = new FadeState();
-		private List<FadeState> fadeStates = new List<FadeState>();
+		private readonly FadeState moveForwardsState = new FadeState();
+		private readonly FadeState moveSidewaysState = new FadeState();
+		private readonly FadeState moveUpwardsState = new FadeState();
+		private readonly FadeState tiltState = new FadeState();
+		private readonly FadeState rotationState = new FadeState();
+		private List<FadeState> fadeStates;
 
 		/// <summary>
 		/// (Injectable) Settings that define how the camera should behave when moving or rotating.
@@ -47,8 +49,8 @@
 		[Inject]
 		public ITacticalCameraSettings Settings
 		{
-			get { return settings; }
-			set { ApplySettings(value); }
+			get => settings;
+			set => ApplySettings(value);
 		}
 
 		/// <summary>
@@ -57,8 +59,8 @@
 		[Inject]
 		public ITacticalCameraInputProvider InputProvider
 		{
-			get { return inputProvider; }
-			set { inputProvider = value; }
+			get;
+			set;
 		}
 
 		/// <summary>
@@ -68,17 +70,14 @@
 		[Inject]
 		public ITacticalCameraBounds Bounds
 		{
-			get { return bounds; }
-			set { bounds = value; }
+			get;
+			set;
 		}
 
 		/// <summary>
 		/// Is the camera moving to a focus point.
 		/// </summary>
-		public bool IsMovingToFocusPoint
-		{
-			get { return moveToPositionHandle != null; }
-		}
+		public bool IsMovingToFocusPoint => moveToPositionHandle != null;
 
 		/// <summary>
 		/// The current maximum movement speed of the camera based on it's height.
@@ -101,10 +100,7 @@
 		/// <summary>
 		/// Shortcut to retrieve the y-value of the transform's position in world-space.
 		/// </summary>
-		public float CurrentHeight
-		{
-			get { return transform.position.y; }
-		}
+		public float CurrentHeight => cachedTransform.position.y;
 
 		/// <summary>
 		/// The current tilt angle. (In Degrees)
@@ -114,26 +110,24 @@
 		{
 			get
 			{
-				Vector3 forward = transform.forward;
-				Vector3 up = transform.up;
-				float x = transform.localEulerAngles.x;
+				Vector3 forward = cachedTransform.forward;
+				Vector3 up = cachedTransform.up;
+				float x = cachedTransform.localEulerAngles.x;
 
-				// Depending on the quadrant the up-vector and forward-verctor are,
+				// Depending on the quadrant the up-vector and forward-vector are,
 				// a modifier is applied to map it between -180 and 180 degrees.
 				if (forward.y <= 0)
 				{
 					return (up.y >= 0f) ? x : (180f - x);
 				}
-				else
-				{
-					return (up.y >= 0f) ? (x - 360f) : (180f - x);
-				}
+				
+				return (up.y >= 0f) ? (x - 360f) : (180f - x);
 			}
 			private set
 			{
 				float tiltAngle = value;
-				Vector3 forward = transform.forward;
-				Vector3 up = transform.up;
+				Vector3 forward = cachedTransform.forward;
+				Vector3 up = cachedTransform.up;
 				if (forward.y <= 0)
 				{
 					tiltAngle = (up.y >= 0f) ? tiltAngle : (180f + tiltAngle);
@@ -143,9 +137,9 @@
 					tiltAngle = (up.y >= 0f) ? (tiltAngle + 360f) : (180f + tiltAngle);
 				}
 
-				Vector3 localEulerAngles = transform.localEulerAngles;
+				Vector3 localEulerAngles = cachedTransform.localEulerAngles;
 				localEulerAngles.x = tiltAngle;
-				transform.localEulerAngles = localEulerAngles;
+				cachedTransform.localEulerAngles = localEulerAngles;
 			}
 		}
 
@@ -155,8 +149,8 @@
 		/// <param name="targetPosition">Target position for the camera to move to.</param>
 		public void MoveToTarget(Vector3 targetPosition)
 		{
-			StopRoutine(ref moveToPositionHandle);
-			moveToPositionHandle = StartCoroutine(RoutineMoveToPosition(targetPosition));
+			CancelMoveToTarget();	// If it was running.
+			moveToPositionHandle = StartCoroutine(RoutineMoveToTarget(targetPosition));
 		}
 
 		/// <summary>
@@ -166,26 +160,28 @@
 		{
 			if (moveToPositionHandle != null)
 			{
-				StopRoutine(ref moveToPositionHandle);
+				StopCoroutine(moveToPositionHandle);
+				moveToPositionHandle = null;
 			}
 		}
 
 		private void Awake()
 		{
 			characterController = GetComponent<CharacterController>();
-			camera = GetComponent<Camera>();
+			cachedCamera = GetComponent<Camera>();
+			cachedTransform = transform;
 
 			if ((settings == null) && (initialSettings != null))
 			{
 				Settings = initialSettings;
 			}
 
-			if ((inputProvider == null) && (initialInputProvider != null))
+			if ((InputProvider == null) && (initialInputProvider != null))
 			{
 				InputProvider = initialInputProvider;
 			}
 
-			if ((bounds == null) && (initialCameraBounds != null))
+			if ((Bounds == null) && (initialCameraBounds != null))
 			{
 				Bounds = initialCameraBounds;
 			}
@@ -202,7 +198,7 @@
 
 		private void OnEnable()
 		{
-			if ((inputProvider == null) || (settings == null))
+			if ((InputProvider == null) || (settings == null))
 			{
 				return;
 			}
@@ -214,17 +210,7 @@
 			if (settings.UseDynamicFieldOfView)
 			{
 				float t = operatingHeightRange.InverseLerp(CurrentHeight);
-				camera.fieldOfView = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
-			}
-
-			if (monitorTiltAngleHandle == null)
-			{
-				monitorTiltAngleHandle = StartCoroutine(RoutineMonitorTilt());
-			}
-
-			if (dynamicFieldOfViewHandle == null)
-			{
-				dynamicFieldOfViewHandle = StartCoroutine(RoutineMonitorFieldOfView());
+				cachedCamera.fieldOfView = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
 			}
 		}
 
@@ -232,17 +218,12 @@
 		{
 			// By setting the time to 0, we basically reset them.
 			fadeStates.ForEach(fs => fs.Reset());
-			StopRoutine(ref moveToPositionHandle);
-			StopRoutine(ref monitorTiltAngleHandle);
-			StopRoutine(ref dynamicFieldOfViewHandle);
-
-			isOrbiting = false;
-			orbitPoint = Vector3.zero;
+			CancelMoveToTarget();
 		}
 
 		private void LateUpdate()
 		{
-			if ((inputProvider == null) || (settings == null))
+			if ((InputProvider == null) || (settings == null))
 			{
 				return;
 			}
@@ -251,15 +232,14 @@
 			UpdateMovement();
 			UpdateBounds();
 			UpdateRotation();
+			
+			MonitorTilt();
+			MonitorFieldOfView();
 		}
 
 		private void ApplySettings(ITacticalCameraSettings settings)
 		{
-			if (this.settings != null)
-			{
-				this.settings.PurgeDelegatesOf(this);
-			}
-
+			this.settings?.PurgeDelegatesOf(this);
 			this.settings = settings;
 
 			if (settings == null)
@@ -274,33 +254,23 @@
 			rotationState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut);
 			characterController.radius = settings.InteractionBubbleRadius;
 			characterController.height = settings.InteractionBubbleRadius;
-
-			if (monitorTiltAngleHandle == null)
-			{
-				monitorTiltAngleHandle = StartCoroutine(RoutineMonitorTilt());
-			}
-
-			if (dynamicFieldOfViewHandle == null)
-			{
-				dynamicFieldOfViewHandle = StartCoroutine(RoutineMonitorFieldOfView());
-			}
 		}
 
 		private void UpdateStates()
 		{
-			if (inputProvider == null)
+			if (InputProvider == null)
 			{
 				return;
 			}
 
 			// Movement
-			UpdateState(inputProvider.MoveForward, moveForwardsState);
-			UpdateState(inputProvider.MoveSideways, moveSidewaysState);
-			UpdateState(inputProvider.MoveUp, moveUpwardsState);
+			UpdateState(InputProvider.MoveForward, moveForwardsState);
+			UpdateState(InputProvider.MoveSideways, moveSidewaysState);
+			UpdateState(InputProvider.MoveUp, moveUpwardsState);
 
 			// Rotating
-			UpdateState(inputProvider.TiltDelta, tiltState);
-			UpdateState(inputProvider.RotationDelta, rotationState);
+			UpdateState(InputProvider.TiltDelta, tiltState);
+			UpdateState(InputProvider.RotationDelta, rotationState);
 		}
 
 		private void UpdateState(float inputValue, FadeState state)
@@ -311,9 +281,8 @@
 			}
 			else
 			{
-				// If the outcome is not 0, then they are of opposite sign
-				// and we substitute the new value, or we check whether
-				// the new input is stronger than the current fading value.
+				// If the outcome is not 0, then they are of opposite sign and we substitute the new value,
+				// or we check whether the new input is stronger than the current fading value.
 				float value = state.Value;
 				if (((Math.Sign(inputValue) + Math.Sign(value)) != 0) || (Mathf.Abs(inputValue) > Mathf.Abs(value)))
 				{
@@ -329,11 +298,11 @@
 		private void UpdateMovement()
 		{
 			// If moving to a focus point and the animation is requested to be cancelled.
-			if ((moveToPositionHandle != null) && inputProvider.CancelMoveToTarget)
+			if ((moveToPositionHandle != null) && InputProvider.CancelMoveToTarget)
 			{
 				CancelMoveToTarget();
 			}
-			else if (inputProvider.MoveToTarget)
+			else if (InputProvider.MoveToTarget)
 			{
 				MoveToTarget();
 			}
@@ -347,13 +316,13 @@
 				Vector3 direction = Vector3.zero;
 				if (moveForwardsState.IsActive)
 				{
-					Vector3 projectedForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+					Vector3 projectedForward = Vector3.ProjectOnPlane(cachedTransform.forward, Vector3.up).normalized;
 
 					// If the projected forward vector is close to 0, then that means the camera is facing down,
 					// Then we use the up-vector as an indicator to go forward.
 					if (projectedForward.sqrMagnitude <= settings.Epsilon)
 					{
-						projectedForward = Vector3.ProjectOnPlane(transform.up, Vector3.up).normalized;
+						projectedForward = Vector3.ProjectOnPlane(cachedTransform.up, Vector3.up).normalized;
 					}
 
 					direction += projectedForward * moveForwardsState.Value;
@@ -361,13 +330,13 @@
 
 				if (moveSidewaysState.IsActive)
 				{
-					Vector3 projectedRight = Vector3.ProjectOnPlane(transform.right, Vector3.up).normalized;
+					Vector3 projectedRight = Vector3.ProjectOnPlane(cachedTransform.right, Vector3.up).normalized;
 					direction += projectedRight * moveSidewaysState.Value;
 				}
 
 				if (direction.sqrMagnitude > settings.Epsilon)
 				{
-					movement += direction.normalized * MaxMovementSpeed * Time.deltaTime;
+					movement += direction.normalized * (MaxMovementSpeed * Time.deltaTime);
 				}
 			}
 
@@ -377,7 +346,7 @@
 				Vector3 direction = Vector3.up * moveUpwardsState.Value;
 				if (direction.sqrMagnitude > settings.Epsilon)
 				{
-					movement += direction.normalized * MaxMovementSpeed * Time.deltaTime;
+					movement += direction.normalized * (MaxMovementSpeed * Time.deltaTime);
 				}
 			}
 
@@ -391,42 +360,34 @@
 			}
 
 			// Restrict the height movement
-			Vector3 targetPosition = transform.position + movement;
+			Vector3 position = cachedTransform.position;
+			Vector3 targetPosition = position + movement;
 			UpdateOperatingHeightRange(targetPosition);
 			targetPosition.y = operatingHeightRange.Clamp(targetPosition.y);
 
-			characterController.Move(targetPosition - transform.position);
+			characterController.Move(targetPosition - position);
 		}
 
 		private void UpdateRotation()
 		{
 			if (rotationState.IsActive)
 			{
-				if (inputProvider.OrbitAroundTarget)
+				if (InputProvider.OrbitAroundTarget)
 				{
-					if (!isOrbiting && Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
+					if (Physics.Raycast(cachedTransform.position, cachedTransform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
 					{
-						orbitPoint = hit.point;
-						isOrbiting = true;
+						cachedTransform.RotateAround(hit.point, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime);
 					}
-
-					if (isOrbiting)
-					{
-						// Rotation - Rotate horizontally around the focus point
-						transform.RotateAround(orbitPoint, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime);
-
-					}
-					else
+					else if (settings.AllowPivotOnFailedOrbit)
 					{
 						// Rotation - Rotate around the world up vector
-						transform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
+						cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);						
 					}
 				}
 				else
 				{
 					// Rotation - Rotate around the world up vector
-					transform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
-					isOrbiting = false;
+					cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
 				}
 			}
 
@@ -445,14 +406,14 @@
 			}
 
 			// Dirty fix for now: keep the z-value of the local Euler angles 0 to prevent drifting.
-			Vector3 localEulerAngles = transform.localEulerAngles;
+			Vector3 localEulerAngles = cachedTransform.localEulerAngles;
 			localEulerAngles.z = 0f;
-			transform.localEulerAngles = localEulerAngles;
+			cachedTransform.localEulerAngles = localEulerAngles;
 		}
 
 		private void UpdateOperatingHeightRange()
 		{
-			UpdateOperatingHeightRange(transform.position);
+			UpdateOperatingHeightRange(cachedTransform.position);
 		}
 
 		private void UpdateOperatingHeightRange(Vector3 origin)
@@ -483,101 +444,68 @@
 
 		private void UpdateBounds()
 		{
-			if (bounds != null)
-			{
-				bounds.Apply(this);
-			}
+			Bounds?.Apply(this);
 		}
 
 		private void UpdateTiltFactor()
 		{
 			tiltFactor = operatingTiltRange.InverseLerp(CurrentTiltAngle);
 		}
-
-		private void ApplyTiltFactor()
+		
+		private void MonitorTilt()
 		{
+			// Adapt the operating tilt range based on the operating height range, and if it's
+			// over its limits, then move it towards it's target range.
+			float t = operatingHeightRange.InverseLerp(CurrentHeight);
+			t = Mathf.Clamp01(t);
+			t = settings.EvaluateTiltTransition(t);
+			ValueRange targetRange = ValueRange.Lerp(settings.TiltRangeLow, settings.TiltRangeHigh, t);
+			operatingTiltRange.Set(
+				Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowSpeed, 0.2f),
+				Mathf.SmoothDampAngle(operatingTiltRange.Max, targetRange.Max, ref tiltHighSpeed, 0.2f));
+
 			CurrentTiltAngle = operatingTiltRange.Lerp(tiltFactor);
 		}
 
+		private void MonitorFieldOfView()
+		{
+			if (!(settings is { UseDynamicFieldOfView: true }))
+			{
+				return;
+			}
+			
+			float t = operatingHeightRange.InverseLerp(CurrentHeight);
+			float target = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
+			cachedCamera.fieldOfView = Mathf.SmoothDamp(cachedCamera.fieldOfView, target, ref fovSpeed, 0.2f);
+		}
+		
 		private void MoveToTarget()
 		{
-			RaycastHit hitInfo;
-			Ray direction = Camera.main.ScreenPointToRay(Input.mousePosition);
-			if (!Physics.Raycast(direction, out hitInfo, float.MaxValue, settings.InteractionMask, QueryTriggerInteraction.Ignore))
+			Ray direction = cachedCamera.ScreenPointToRay(Input.mousePosition);
+			if (!Physics.Raycast(direction, out RaycastHit hitInfo, float.MaxValue, settings.InteractionMask, QueryTriggerInteraction.Ignore))
 			{
+				onMoveToTargetFailed.InvokeIfNotNull();
 				return;
 			}
 
 			Vector3 targetPosition = hitInfo.point;
 			MoveToTarget(targetPosition);
 		}
-
-		private void StopRoutine(ref Coroutine handle)
-		{
-			if (handle != null)
-			{
-				StopCoroutine(handle);
-				handle = null;
-			}
-		}
-
-		private IEnumerator RoutineMoveToPosition(Vector3 endPosition)
+		
+		private IEnumerator RoutineMoveToTarget(Vector3 targetPosition)
 		{
 			Vector3 velocity = Vector3.zero;
 			do
 			{
-				endPosition.y = CurrentHeight;
-				Vector3 target = Vector3.SmoothDamp(transform.position, endPosition, ref velocity, settings.MoveToTargetSmoothingTime);
-				characterController.Move(target - transform.position);
+				targetPosition.y = CurrentHeight;
+				Vector3 position = cachedTransform.position;
+				Vector3 target = Vector3.SmoothDamp(position, targetPosition, ref velocity, settings.MoveToTargetSmoothingTime);
+				characterController.Move(target - position);
 				yield return null;
 
 			} while (velocity.sqrMagnitude > settings.Epsilon);
 
 			moveToPositionHandle = null;
-		}
-
-		private IEnumerator RoutineMonitorTilt()
-		{
-			float tiltLowVelocity = 0f;
-			float tiltHighVelocity = 0f;
-
-			WaitForEndOfFrame waitHandle = new WaitForEndOfFrame();
-			yield return waitHandle;
-
-			while (true)
-			{
-				// Adapt the operating tilt range based on the operating height range, and if it's
-				// over its limits, then move it towards it's target range.
-				float t = operatingHeightRange.InverseLerp(CurrentHeight);
-				t = Mathf.Clamp01(t);
-				t = settings.EvaluateTiltTransition(t);
-				ValueRange targetRange = ValueRange.Lerp(settings.TiltRangeLow, settings.TiltRangeHigh, t);
-				operatingTiltRange.Set(
-					Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowVelocity, 0.2f),
-					Mathf.SmoothDampAngle(operatingTiltRange.Max, targetRange.Max, ref tiltHighVelocity, 0.2f));
-
-				ApplyTiltFactor();
-				yield return waitHandle;
-			}
-		}
-
-		private IEnumerator RoutineMonitorFieldOfView()
-		{
-			float velocity = 0f;
-			WaitForEndOfFrame waitHandle = new WaitForEndOfFrame();
-			yield return waitHandle;
-
-			while (true)
-			{
-				if ((settings != null) && settings.UseDynamicFieldOfView)
-				{
-					float t = operatingHeightRange.InverseLerp(CurrentHeight);
-					float target = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
-					camera.fieldOfView = Mathf.SmoothDamp(camera.fieldOfView, target, ref velocity, 0.2f);
-				}
-
-				yield return waitHandle;
-			}
 		}
 	}
 }

@@ -1,39 +1,30 @@
-﻿namespace ImpossibleOdds.TacticalCamera
-{
-	using System;
-	using UnityEngine;
+﻿using System;
+using UnityEngine;
 
+namespace ImpossibleOdds.TacticalCamera
+{
 	[Serializable]
 	public struct ValueRange
 	{
+		[SerializeField]
+		internal float min;
+		[SerializeField]
+		internal float max;
+		
 		/// <summary>
 		/// The minimum value of the value range.
 		/// </summary>
-		public float Min
-		{
-			get { return min; }
-		}
+		public float Min => min;
 
 		/// <summary>
 		/// The maximum value of the value range.
 		/// </summary>
-		public float Max
-		{
-			get { return max; }
-		}
+		public float Max => max;
 
 		/// <summary>
 		/// Distance between min and max value.
 		/// </summary>
-		public float Range
-		{
-			get { return Mathf.Abs(max - min); }
-		}
-
-		[SerializeField]
-		private float min;
-		[SerializeField]
-		private float max;
+		public float Range => Mathf.Abs(max - min);
 
 		public ValueRange(float min, float max)
 		{
@@ -43,9 +34,11 @@
 
 		public static ValueRange Lerp(ValueRange a, ValueRange b, float t)
 		{
-			ValueRange result = new ValueRange();
-			result.min = Mathf.Lerp(a.min, b.min, t);
-			result.max = Mathf.Lerp(a.max, b.max, t);
+			ValueRange result = new ValueRange
+			{
+				min = Mathf.Lerp(a.min, b.min, t),
+				max = Mathf.Lerp(a.max, b.max, t)
+			};
 			return result;
 		}
 
@@ -89,7 +82,7 @@
 
 		public override string ToString()
 		{
-			return string.Format("Min: {0}, Max: {1}", Min.ToString("0.000"), Max.ToString("0.000"));
+			return $"Min: {Min:0.000}, Max: {Max:0.000}";
 		}
 	}
 }

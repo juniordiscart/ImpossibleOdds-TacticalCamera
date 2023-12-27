@@ -61,33 +61,16 @@
 		private bool rotationEnabled = false;
 
 		/// <inheritdoc />
-		public override bool MoveToTarget
-		{
-			get
-			{
-				return
-					(latestEvent != null) &&
-					latestEvent.isMouse &&
-					(latestEvent.type == EventType.MouseDown) &&
-					(latestEvent.button == (int)mouseMoveToPositionKey) &&
-					(latestEvent.clickCount == 2);
-			}
-		}
+		public override bool MoveToTarget =>
+			latestEvent is { isMouse: true, type: EventType.MouseDown } &&
+			(latestEvent.button == (int)mouseMoveToPositionKey) &&
+			(latestEvent.clickCount == 2);
 
 		/// <inheritdoc/>
-		public override bool CancelMoveToTarget
-		{
-			get
-			{
-				return !Mathf.Approximately(Mathf.Abs(MoveForward), 0f) || !Mathf.Approximately(Mathf.Abs(MoveSideways), 0f) || Input.GetKeyDown(KeyCode.Escape);
-			}
-		}
+		public override bool CancelMoveToTarget => !Mathf.Approximately(Mathf.Abs(MoveForward), 0f) || !Mathf.Approximately(Mathf.Abs(MoveSideways), 0f) || Input.GetKeyDown(KeyCode.Escape);
 
 		/// <inheritdoc />
-		public override bool OrbitAroundTarget
-		{
-			get { return Input.GetKey(orbitCamera); }
-		}
+		public override bool OrbitAroundTarget => Input.GetKey(orbitCamera);
 
 		/// <inheritdoc />
 		public override float MoveForward
@@ -241,23 +224,24 @@
 
 		private void CheckMouseCursor()
 		{
-			if (alwaysRotating || (latestEvent == null) || !latestEvent.isMouse)
+			if (alwaysRotating || !(latestEvent is { isMouse: true }))
 			{
 				return;
 			}
 
-			if ((latestEvent.type == EventType.MouseDown) && (latestEvent.button == (int)mouseRotationKey))
+			switch (latestEvent.type)
 			{
-				Cursor.visible = false;
-				Cursor.lockState = CursorLockMode.Locked;
-				rotationEnabled = false;
-				StartCoroutine(RoutineWaitForDrag());   // Prevent spike in mouse input
-			}
-			else if ((latestEvent.type == EventType.MouseUp) && (latestEvent.button == (int)mouseRotationKey))
-			{
-				Cursor.visible = true;
-				Cursor.lockState = CursorLockMode.None;
-				rotationEnabled = false;
+				case EventType.MouseDown when (latestEvent.button == (int)mouseRotationKey):
+					Cursor.visible = false;
+					Cursor.lockState = CursorLockMode.Locked;
+					rotationEnabled = false;
+					StartCoroutine(RoutineWaitForDrag()); // Prevent spike in mouse input
+					break;
+				case EventType.MouseUp when (latestEvent.button == (int)mouseRotationKey):
+					Cursor.visible = true;
+					Cursor.lockState = CursorLockMode.None;
+					rotationEnabled = false;
+					break;
 			}
 		}
 

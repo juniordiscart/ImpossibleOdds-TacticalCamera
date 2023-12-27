@@ -1,0 +1,17 @@
+{
+    "name": "ImpossibleOdds.TacticalCamera.Editor",
+    "rootNamespace": "",
+    "references": [
+        "ImpossibleOdds.Core",
+        "ImpossibleOdds.TacticalCamera"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

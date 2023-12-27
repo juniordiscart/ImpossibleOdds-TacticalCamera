@@ -63,3 +63,4 @@ sysinfo.txt
 crashlytics-build.properties
 Assets/Demo/*
 *.DS_Store
+.idea/*

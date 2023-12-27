@@ -1,5 +1,6 @@
 {
-    "name": "ImpossibleOddsTacticalCamera",
+    "name": "ImpossibleOdds.TacticalCamera",
+    "rootNamespace": "",
     "references": [
         "ImpossibleOdds.DependencyInjection",
         "ImpossibleOdds.Core"

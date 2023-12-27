@@ -1,41 +1,39 @@
-﻿namespace ImpossibleOdds.TacticalCamera
-{
-	using System;
-	using UnityEngine;
+﻿using System;
+using UnityEngine;
 
+namespace ImpossibleOdds.TacticalCamera
+{
 	/// <summary>
 	/// Class to keep track of the current fade state of a value. It is controlled by time and a curve.
 	/// </summary>
 	public class FadeState
 	{
-		private float time = 0f;
-		private float fadeTime = 0f;
-		private float fadeValue = 0f;
-		private Func<float, float> fadeEvaluation = null;
+		private float fadeTime;
+		private float fadeValue;
 
 		public float Time
 		{
-			get { return time; }
-			set { time = value; }
+			get;
+			set;
 		}
 
 		public float Value
 		{
 			get
 			{
-				float t = Mathf.InverseLerp(fadeTime, 0f, time);
-				return fadeEvaluation(t) * fadeValue;
+				float t = Mathf.InverseLerp(fadeTime, 0f, Time);
+				return FadeEvaluation(t) * fadeValue;
 			}
 		}
 
 		public float FadeTime
 		{
-			get { return fadeTime; }
+			get => fadeTime;
 			set
 			{
 				if (value <= 0f)
 				{
-					throw new System.ArgumentOutOfRangeException("The fade time should be a value larger than 0.");
+					throw new ArgumentOutOfRangeException(nameof (value),"The fade time should be a value larger than 0.");
 				}
 
 				fadeTime = value;
@@ -44,24 +42,21 @@
 
 		public float FadeValue
 		{
-			get { return fadeValue; }
+			get => fadeValue;
 			set
 			{
 				fadeValue = value;
-				time = fadeTime;
+				Time = fadeTime;
 			}
 		}
 
 		public Func<float, float> FadeEvaluation
 		{
-			get { return fadeEvaluation; }
-			set { fadeEvaluation = value; }
+			get;
+			set;
 		}
 
-		public bool IsActive
-		{
-			get { return time > 0f; }
-		}
+		public bool IsActive => Time > 0f;
 
 		public void Reset()
 		{
@@ -70,20 +65,20 @@
 
 		public float Tick()
 		{
-			if (time == 0f)
+			if (Time == 0f)
 			{
 				return 0f;
 			}
 
-			time = Mathf.Clamp(time - UnityEngine.Time.deltaTime, 0f, fadeTime);
+			Time = Mathf.Clamp(Time - UnityEngine.Time.deltaTime, 0f, fadeTime);
 			return Value;
 		}
 
 		public void ApplySettings(float fadeTime, Func<float, float> fadeEvaluation)
 		{
 			this.fadeTime = fadeTime;
-			this.fadeEvaluation = fadeEvaluation;
-			time = 0f;
+			FadeEvaluation = fadeEvaluation;
+			Time = 0f;
 			fadeValue = 0f;
 		}
 	}

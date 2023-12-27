@@ -1,18 +1,12 @@
-﻿namespace ImpossibleOdds.TacticalCamera
-{
-	using System;
-	using UnityEngine;
+﻿using UnityEngine;
 
+namespace ImpossibleOdds.TacticalCamera
+{
 	/// <summary>
 	/// Interface to drive the tactical camera's behaviour.
 	/// </summary>
 	public interface ITacticalCameraSettings
 	{
-		/// <summary>
-		/// Invoked whenever a value is updated.
-		/// </summary>
-		event Action onSettingsUpdated;
-
 		/// <summary>
 		/// Smallest value the camera will use to compare values with to determine certain actions.
 		/// </summary>
@@ -27,7 +21,6 @@
 		ValueRange AbsoluteHeightRange
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -36,7 +29,6 @@
 		ValueRange MovementSpeedRange
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -45,7 +37,6 @@
 		float MovementFadeTime
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -54,7 +45,6 @@
 		float MoveToTargetSmoothingTime
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -63,7 +53,6 @@
 		float MaxRotationalSpeed
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -72,7 +61,6 @@
 		float RotationalFadeTime
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -81,7 +69,6 @@
 		ValueRange TiltRangeLow
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -90,7 +77,6 @@
 		ValueRange TiltRangeHigh
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -99,7 +85,6 @@
 		bool UseDynamicFieldOfView
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -108,7 +93,6 @@
 		ValueRange DynamicFieldOfViewRange
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -117,7 +101,6 @@
 		LayerMask InteractionMask
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -126,7 +109,6 @@
 		float InteractionDistance
 		{
 			get;
-			set;
 		}
 
 		/// <summary>
@@ -135,7 +117,14 @@
 		float InteractionBubbleRadius
 		{
 			get;
-			set;
+		}
+
+		/// <summary>
+		/// When the camera can't determine a suitable orbital pivot point, is it allowed to pivot instead?
+		/// </summary>
+		bool AllowPivotOnFailedOrbit
+		{
+			get;
 		}
 
 		/// <summary>
@@ -144,12 +133,14 @@
 		/// <param name="t">Value between 0 and 1.</param>
 		/// <returns>The fade factor to be applied to the movement speed.</returns>
 		float EvaluateMovementFadeOut(float t);
+		
 		/// <summary>
 		/// Evaluate how the rotation fades out when no more input is given.
 		/// </summary>
 		/// <param name="t">Value between 0 and 1.</param>
 		/// <returns>The fade factor to be applied to the rotational speed.</returns>
 		float EvaluateRotationFadeOut(float t);
+		
 		/// <summary>
 		/// Evaluate how the movement speed should change based on the relative height of the camera,
 		/// with 0 defined at the lowest operating point and 1 at the highest.
@@ -157,6 +148,7 @@
 		/// <param name="t">Value between 0 and 1.</param>
 		/// <returns>The desired interpolated value for the movement speed transition.</returns>
 		float EvaluateMovementTransition(float t);
+		
 		/// <summary>
 		/// Evaluate how the tilt range should change based on the relative height of the camera,
 		/// with 0 defined at the lowest operating point and 1 at the highest.
@@ -164,6 +156,7 @@
 		/// <param name="t">Value between 0 and 1.</param>
 		/// <returns>The desired interpolated value for the tilt range transition.</returns>
 		float EvaluateTiltTransition(float t);
+		
 		/// <summary>
 		/// Evaluate how the field of view should change based on the relative height of the camera,
 		/// with 0 defined at the lowest operating point and 1 at the highest.
