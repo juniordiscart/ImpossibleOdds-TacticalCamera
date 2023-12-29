@@ -15,11 +15,11 @@ namespace ImpossibleOdds.TacticalCamera
 		public event Action onMoveToTargetFailed;
 		
 		[SerializeField, Tooltip("Initial settings if no other settings are provided through other means.")]
-		private TacticalCameraSettings initialSettings;
+		internal TacticalCameraSettings initialSettings;
 		[SerializeField, Tooltip("Initial input provider if no other input provider is provided through other means.")]
-		private AbstractTacticalCameraInputProvider initialInputProvider;
+		internal AbstractTacticalCameraInputProvider initialInputProvider;
 		[SerializeField, Tooltip("(Optional) - Initial camera bounds if no other bounds are provided through other means.")]
-		private AbstractTacticalCameraBounds initialCameraBounds;
+		internal AbstractTacticalCameraBounds initialCameraBounds;
 
 		private ITacticalCameraSettings settings;
 
