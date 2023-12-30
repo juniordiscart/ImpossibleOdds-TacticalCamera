@@ -481,7 +481,7 @@ namespace ImpossibleOdds.TacticalCamera
 		
 		private void MoveToTarget()
 		{
-			Ray direction = cachedCamera.ScreenPointToRay(Input.mousePosition);
+			Ray direction = cachedCamera.ScreenPointToRay(InputProvider.MousePosition);
 			if (!Physics.Raycast(direction, out RaycastHit hitInfo, float.MaxValue, settings.InteractionMask, QueryTriggerInteraction.Ignore))
 			{
 				onMoveToTargetFailed.InvokeIfNotNull();

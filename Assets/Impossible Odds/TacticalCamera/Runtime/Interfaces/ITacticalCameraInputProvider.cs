@@ -1,4 +1,5 @@
-﻿namespace ImpossibleOdds.TacticalCamera
+﻿using UnityEngine;
+namespace ImpossibleOdds.TacticalCamera
 {
 	/// <summary>
 	/// Provides the necessary inputs to control the camera.
@@ -78,6 +79,14 @@
 		/// </summary>
 		/// <value>Positive value to rotate right, negative value to rotate left.</value>
 		float RotationDelta
+		{
+			get;
+		}
+
+		/// <summary>
+		/// The current mouse position on the screen, in pixel coordinates.
+		/// </summary>
+		Vector2 MousePosition
 		{
 			get;
 		}
