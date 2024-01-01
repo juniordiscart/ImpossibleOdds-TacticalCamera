@@ -1,16 +1,17 @@
 ﻿using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ImpossibleOdds.TacticalCamera
 {
 	/// <summary>
 	/// Restricts the camera's position within an axis-aligned bounding box.
 	/// </summary>
-	public class TacticalCameraBoxBounds : AbstractTacticalCameraBounds, ITacticalCameraBounds
+	public class TacticalCameraBoxBounds : AbstractTacticalCameraBounds
 	{
 		[SerializeField, Tooltip("Axis-aligned bounding box that determines the camera's area to move in.")]
 		private Bounds boundingBox = new Bounds(Vector3.zero, Vector3.one * 100f);
-		[SerializeField, Tooltip("Should the bounds be relative to the world position of the object?")]
-		private bool relativeToWorldPosition;
+		[SerializeField, Tooltip("Should the bounds follow the game object's position, rotation and scale?")]
+		private bool followGameObject;
 
 		/// <summary>
 		/// The bounding box used to restrict the camera.
@@ -24,28 +25,42 @@ namespace ImpossibleOdds.TacticalCamera
 		/// <inheritdoc />
 		public override void Apply(TacticalCamera tCamera)
 		{
-			Vector3 positionToTest = tCamera.transform.position;
-			if (relativeToWorldPosition)
-			{
-				positionToTest -= transform.position;
-			}
-
-			if (boundingBox.Contains(positionToTest))
-			{
-				return;
-			}
-			
-			Vector3 newPosition = boundingBox.ClosestPoint(positionToTest);
-
-			if (relativeToWorldPosition)
-			{
-				newPosition += transform.position;
-			}
-				
-			tCamera.transform.position = newPosition;
+			tCamera.transform.position = Apply(tCamera.transform.position);
 		}
 
-		private void OnDrawGizmosSelected()
+		/// <inheritdoc />
+		public override Vector3 Apply(Vector3 position)
+		{
+			if (followGameObject)
+			{
+				position = transform.InverseTransformPoint(position);
+			}
+
+			if (!Bounds.Contains(position))
+			{
+				position = Bounds.ClosestPoint(position);
+			}
+			
+			if (followGameObject)
+			{
+				position = transform.TransformPoint(position);
+			}
+
+			return position;
+		}
+
+		/// <inheritdoc />
+		public override bool IsWithinBounds(Vector3 position)
+		{
+			if (followGameObject)
+			{
+				position = transform.InverseTransformPoint(position);
+			}
+
+			return boundingBox.Contains(position);
+		}
+
+		private void OnDrawGizmos()
 		{
 			if (!enabled)
 			{
@@ -55,9 +70,11 @@ namespace ImpossibleOdds.TacticalCamera
 			Color cached = Gizmos.color;
 			Gizmos.color = Color.blue;
 
-			if (relativeToWorldPosition)
+			if (followGameObject)
 			{
-				Gizmos.DrawWireCube(transform.position + boundingBox.center, boundingBox.size);
+				Gizmos.matrix = transform.localToWorldMatrix;
+				Gizmos.DrawWireCube(boundingBox.center, boundingBox.size);
+				Gizmos.matrix = Matrix4x4.identity;
 			}
 			else
 			{

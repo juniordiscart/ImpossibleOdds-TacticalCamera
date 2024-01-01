@@ -494,17 +494,25 @@ namespace ImpossibleOdds.TacticalCamera
 		
 		private IEnumerator RoutineMoveToTarget(Vector3 targetPosition)
 		{
-			Vector3 velocity = Vector3.zero;
-			do
+			Vector3 originalPosition = cachedTransform.position;
+			float moveToTargetTime = settings.MoveToTargetSmoothingTime;
+			float time = 0f;
+			
+			while (time < moveToTargetTime)
 			{
+				float t = Mathf.SmoothStep(0f, 1f, time / moveToTargetTime);
+
 				targetPosition.y = CurrentHeight;
-				Vector3 position = cachedTransform.position;
-				Vector3 target = Vector3.SmoothDamp(position, targetPosition, ref velocity, settings.MoveToTargetSmoothingTime);
-				characterController.Move(target - position);
+				originalPosition.y = CurrentHeight;
+				
+				characterController.Move(Vector3.Lerp(originalPosition, targetPosition, t) - cachedTransform.position);
+				time += Time.deltaTime;
+				
 				yield return null;
+			}
 
-			} while (velocity.sqrMagnitude > settings.Epsilon);
-
+			targetPosition.y = CurrentHeight;
+			characterController.Move(targetPosition - cachedTransform.position);
 			moveToPositionHandle = null;
 		}
 	}
