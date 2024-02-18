@@ -17,6 +17,17 @@ You can view a quick demo video of this plugin below.
 
 [![Impossible Odds - Tactical Camera][Video]](http://www.youtube.com/watch?v=zZN0o4BFEZY "Impossible Odds - Tactical Camera")
 
+## Prerequisites & installation
+
+The most straight forward option to grab the latest published package available from Github [here](https://github.com/juniordiscart/ImpossibleOdds-TacticalCamera/releases). This will include the required [C# Toolkit][Toolkit] as well.
+
+Another installation option is to use Unity's package manager. Add the following git-tracked URLs to your project:
+
+* C# Toolkit:
+> https://github.com/juniordiscart/ImpossibleOdds-Toolkit.git?path=/Assets/Impossible%20Odds/Toolkit
+* Tactical Camera:
+> https://github.com/juniordiscart/ImpossibleOdds-TacticalCamera.git?path=/Assets/Impossible%20Odds/TacticalCamera
+
 ## Quick Camera Setup
 
 If you want to get started quickly without being bothered with all the details, then follow these few steps:
