@@ -5,7 +5,9 @@
         "ImpossibleOdds.Core",
         "ImpossibleOdds.TacticalCamera"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
