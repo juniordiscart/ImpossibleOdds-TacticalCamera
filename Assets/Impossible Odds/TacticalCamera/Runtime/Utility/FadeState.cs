@@ -56,6 +56,12 @@ namespace ImpossibleOdds.TacticalCamera
 			set;
 		}
 
+		public Func<float> DeltaTime
+		{
+			get;
+			set;
+		} = () => UnityEngine.Time.deltaTime;
+
 		public bool IsActive => Time > 0f;
 
 		public void Reset()
@@ -70,14 +76,15 @@ namespace ImpossibleOdds.TacticalCamera
 				return 0f;
 			}
 
-			Time = Mathf.Clamp(Time - UnityEngine.Time.deltaTime, 0f, fadeTime);
+			Time = Mathf.Clamp(Time - DeltaTime(), 0f, fadeTime);
 			return Value;
 		}
 
-		public void ApplySettings(float fadeTime, Func<float, float> fadeEvaluation)
+		public void ApplySettings(float fadeTime, Func<float, float> fadeEvaluation, Func<float> deltaTime)
 		{
 			this.fadeTime = fadeTime;
 			FadeEvaluation = fadeEvaluation;
+			DeltaTime = deltaTime;
 			Time = 0f;
 			fadeValue = 0f;
 		}

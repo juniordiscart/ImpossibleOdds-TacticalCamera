@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.PackageManager.UI;
 
 public static class ExportPackage
 {
@@ -26,7 +27,7 @@ public static class ExportPackage
 		name = Path.GetFileNameWithoutExtension(fileInfo.Name);
 		EditorPrefs.SetString(ExportPackageDirectoryKey, path);
 		EditorPrefs.SetString(ExportPackageNameKey, name);
-
-		AssetDatabase.ExportPackage("Assets/Impossible Odds", fullPath, ExportPackageOptions.Recurse);
+		
+		AssetDatabase.ExportPackage(new[]{ "Assets/Impossible Odds" , "Packages/com.impossibleodds.toolkit"}, fullPath, ExportPackageOptions.Recurse);
 	}
 }

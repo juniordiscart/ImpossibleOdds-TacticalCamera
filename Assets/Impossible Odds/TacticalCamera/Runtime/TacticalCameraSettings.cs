@@ -5,6 +5,9 @@ namespace ImpossibleOdds.TacticalCamera
     [CreateAssetMenu(fileName = "TacticalCameraSettings", menuName = "Impossible Odds/Tactical Camera/new Tactical Camera Settings")]
     public class TacticalCameraSettings : ScriptableObject, ITacticalCameraSettings
     {
+        [SerializeField, Tooltip("Should the tactical camera use 'real' time, as opposed to 'scaled' time?")]
+        internal bool ignoreTimeScale = false;
+        
         [SerializeField, Tooltip("Range of speed maximums depending on the camera's height.")]
         internal ValueRange movementSpeedRange = new ValueRange(5f, 20f);
         [SerializeField, Tooltip("The transition of the maximum speed values from low altitude to high altitude.")]
@@ -51,6 +54,9 @@ namespace ImpossibleOdds.TacticalCamera
 
         /// <inheritdoc />
         public float Epsilon => 0.001f;
+
+        /// <inheritdoc />
+        public bool IgnoreTimeScale => ignoreTimeScale;
 
         /// <inheritdoc />
         public ValueRange MovementSpeedRange
@@ -183,8 +189,8 @@ namespace ImpossibleOdds.TacticalCamera
         private void OnValidate()
         {
             // For axis-flipping reasons, the tilt ranges should remain within the -90 to 90 degrees range.
-            tiltRangeHigh.Set(Mathf.Clamp(tiltRangeHigh.Min, -90f, 90f), Mathf.Clamp(tiltRangeHigh.Max, -90f, 90f));
-            tiltRangeLow.Set(Mathf.Clamp(tiltRangeLow.Min, -90f, 90f), Mathf.Clamp(tiltRangeLow.Max, -90f, 90f));
+            tiltRangeHigh.Set(Mathf.Clamp(tiltRangeHigh.Min, -87.5f, 87.5f), Mathf.Clamp(tiltRangeHigh.Max, -87.5f, 87.5f));
+            tiltRangeLow.Set(Mathf.Clamp(tiltRangeLow.Min, -87.5f, 87.5f), Mathf.Clamp(tiltRangeLow.Max, -87.5f, 87.5f));
         }
 
         /// <inheritdoc />

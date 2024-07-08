@@ -16,6 +16,14 @@ namespace ImpossibleOdds.TacticalCamera
 		}
 
 		/// <summary>
+		/// Should the tactical camera use 'real' time, as opposed to 'scaled' time?
+		/// </summary>
+		bool IgnoreTimeScale
+		{
+			get;
+		}
+
+		/// <summary>
 		/// The minimum height above a surface (defined by the interaction mask) and maximum height the camera can go.
 		/// </summary>
 		ValueRange AbsoluteHeightRange

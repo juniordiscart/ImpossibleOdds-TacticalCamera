@@ -6,6 +6,7 @@ namespace ImpossibleOdds.TacticalCamera.Editor
     [CustomEditor(typeof(TacticalCameraSettings))]
     public class TacticalCameraSettingsEditor : UnityEditor.Editor
     {
+        private bool showGeneralSettings;
         private bool showMovementSettings;
         private bool showAltitudeSettings;
         private bool showRotationSettings;
@@ -21,6 +22,21 @@ namespace ImpossibleOdds.TacticalCamera.Editor
                 fontStyle = FontStyle.Bold
             };
 
+            showGeneralSettings = EditorGUILayout.Foldout(showGeneralSettings, "Time settings", true, boldFoldout);
+
+            if (showGeneralSettings)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.Space();
+
+                EditorGUILayout.LabelField("Ignore Time Scale", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox("Should the camera continue to function regardless of the game's time scale?", MessageType.None);
+                EditorGUILayout.PropertyField(settings.FindProperty(nameof(TacticalCameraSettings.ignoreTimeScale)), new GUIContent("Ignore time scale"));
+
+                EditorGUI.indentLevel--;
+            }
+            
+            EditorGUILayout.Space();
             showMovementSettings = EditorGUILayout.Foldout(showMovementSettings, "Movement", true, boldFoldout);
 
             if (showMovementSettings)
@@ -166,6 +182,8 @@ namespace ImpossibleOdds.TacticalCamera.Editor
                     
                     EditorGUILayout.PropertyField(settings.FindProperty(nameof(TacticalCameraSettings.dynamicFieldOfViewTransition)), new GUIContent("Field-of-view transition curve"));
                 }
+                
+                EditorGUI.indentLevel--;
             }
 
             EditorGUILayout.Space();

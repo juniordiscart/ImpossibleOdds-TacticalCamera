@@ -1,10 +1,11 @@
 {
   "dependencies": {
     "com.impossibleodds.toolkit": {
-      "version": "file:../Submodules/Impossible Odds/Toolkit/Assets/Impossible Odds/Toolkit",
+      "version": "https://github.com/juniordiscart/ImpossibleOdds-Toolkit.git?path=/Assets/Impossible%20Odds/Toolkit",
       "depth": 0,
-      "source": "local",
-      "dependencies": {}
+      "source": "git",
+      "dependencies": {},
+      "hash": "29f658a6a0edc3ab2be2490845f8def10916d5bd"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
@@ -33,7 +34,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.rider": {
-      "version": "3.0.27",
+      "version": "3.0.31",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -96,7 +97,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.textmeshpro": {
-      "version": "3.0.6",
+      "version": "3.0.9",
       "depth": 0,
       "source": "registry",
       "dependencies": {

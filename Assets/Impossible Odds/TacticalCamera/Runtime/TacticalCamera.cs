@@ -79,8 +79,11 @@ namespace ImpossibleOdds.TacticalCamera
 		/// </summary>
 		public bool IsMovingToFocusPoint => moveToPositionHandle != null;
 
+		private float DeltaTime => settings.IgnoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+		private float TimeScaleFactor => settings.IgnoreTimeScale ? Time.timeScale : 1f;
+
 		/// <summary>
-		/// The current maximum movement speed of the camera based on it's height.
+		/// The current maximum movement speed of the camera based on its height.
 		/// </summary>
 		public float MaxMovementSpeed
 		{
@@ -247,11 +250,11 @@ namespace ImpossibleOdds.TacticalCamera
 				return;
 			}
 
-			moveForwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
-			moveSidewaysState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
-			moveUpwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut);
-			tiltState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut);
-			rotationState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut);
+			moveForwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut, () => DeltaTime);
+			moveSidewaysState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut, () => DeltaTime);
+			moveUpwardsState.ApplySettings(settings.MovementFadeTime, settings.EvaluateMovementFadeOut, () => DeltaTime);
+			tiltState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut, () => DeltaTime);
+			rotationState.ApplySettings(settings.RotationalFadeTime, settings.EvaluateRotationFadeOut, () => DeltaTime);
 			characterController.radius = settings.InteractionBubbleRadius;
 			characterController.height = settings.InteractionBubbleRadius;
 		}
@@ -281,7 +284,7 @@ namespace ImpossibleOdds.TacticalCamera
 			}
 			else
 			{
-				// If the outcome is not 0, then they are of opposite sign and we substitute the new value,
+				// If the outcome is not 0, then they are of opposite sign, and we substitute the new value,
 				// or we check whether the new input is stronger than the current fading value.
 				float value = state.Value;
 				if (((Math.Sign(inputValue) + Math.Sign(value)) != 0) || (Mathf.Abs(inputValue) > Mathf.Abs(value)))
@@ -336,7 +339,7 @@ namespace ImpossibleOdds.TacticalCamera
 
 				if (direction.sqrMagnitude > settings.Epsilon)
 				{
-					movement += direction.normalized * (MaxMovementSpeed * Time.deltaTime);
+					movement += direction.normalized * (MaxMovementSpeed * DeltaTime);
 				}
 			}
 
@@ -346,7 +349,7 @@ namespace ImpossibleOdds.TacticalCamera
 				Vector3 direction = Vector3.up * moveUpwardsState.Value;
 				if (direction.sqrMagnitude > settings.Epsilon)
 				{
-					movement += direction.normalized * (MaxMovementSpeed * Time.deltaTime);
+					movement += direction.normalized * (MaxMovementSpeed * DeltaTime);
 				}
 			}
 
@@ -376,18 +379,18 @@ namespace ImpossibleOdds.TacticalCamera
 				{
 					if (Physics.Raycast(cachedTransform.position, cachedTransform.forward, out RaycastHit hit, settings.InteractionDistance, settings.InteractionMask))
 					{
-						cachedTransform.RotateAround(hit.point, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime);
+						cachedTransform.RotateAround(hit.point, Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * DeltaTime);
 					}
 					else if (settings.AllowPivotOnFailedOrbit)
 					{
 						// Rotation - Rotate around the world up vector
-						cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);						
+						cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * DeltaTime, Space.World);						
 					}
 				}
 				else
 				{
 					// Rotation - Rotate around the world up vector
-					cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * Time.deltaTime, Space.World);
+					cachedTransform.Rotate(Vector3.up, rotationState.Value * settings.MaxRotationalSpeed * DeltaTime, Space.World);
 				}
 			}
 
@@ -395,7 +398,7 @@ namespace ImpossibleOdds.TacticalCamera
 			if (tiltState.IsActive)
 			{
 				float currentTiltAngle = CurrentTiltAngle;
-				currentTiltAngle += tiltState.Value * settings.MaxRotationalSpeed * Time.deltaTime;
+				currentTiltAngle += tiltState.Value * settings.MaxRotationalSpeed * DeltaTime;
 				if (!operatingTiltRange.InRange(currentTiltAngle))
 				{
 					currentTiltAngle = operatingTiltRange.Clamp(currentTiltAngle);
@@ -421,7 +424,7 @@ namespace ImpossibleOdds.TacticalCamera
 			float targetMin = settings.AbsoluteHeightRange.Min;
 			float targetMax = settings.AbsoluteHeightRange.Max;
 
-			// Define a possibly height operational minimum.
+			// Define a possible height operational minimum.
 			if (Physics.Raycast(origin, Vector3.down, out RaycastHit minHit, settings.AbsoluteHeightRange.Range, settings.InteractionMask))
 			{
 				targetMin = Mathf.Max(minHit.point.y, targetMin);
@@ -455,14 +458,14 @@ namespace ImpossibleOdds.TacticalCamera
 		private void MonitorTilt()
 		{
 			// Adapt the operating tilt range based on the operating height range, and if it's
-			// over its limits, then move it towards it's target range.
+			// over its limits, then move it towards its target range.
 			float t = operatingHeightRange.InverseLerp(CurrentHeight);
 			t = Mathf.Clamp01(t);
 			t = settings.EvaluateTiltTransition(t);
 			ValueRange targetRange = ValueRange.Lerp(settings.TiltRangeLow, settings.TiltRangeHigh, t);
 			operatingTiltRange.Set(
-				Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowSpeed, 0.2f),
-				Mathf.SmoothDampAngle(operatingTiltRange.Max, targetRange.Max, ref tiltHighSpeed, 0.2f));
+				Mathf.SmoothDampAngle(operatingTiltRange.Min, targetRange.Min, ref tiltLowSpeed, 0.2f * TimeScaleFactor),
+				Mathf.SmoothDampAngle(operatingTiltRange.Max, targetRange.Max, ref tiltHighSpeed, 0.2f * TimeScaleFactor));
 
 			CurrentTiltAngle = operatingTiltRange.Lerp(tiltFactor);
 		}
@@ -476,7 +479,7 @@ namespace ImpossibleOdds.TacticalCamera
 			
 			float t = operatingHeightRange.InverseLerp(CurrentHeight);
 			float target = settings.DynamicFieldOfViewRange.Lerp(settings.EvaluateFieldOfViewTransition(t));
-			cachedCamera.fieldOfView = Mathf.SmoothDamp(cachedCamera.fieldOfView, target, ref fovSpeed, 0.2f);
+			cachedCamera.fieldOfView = Mathf.SmoothDamp(cachedCamera.fieldOfView, target, ref fovSpeed, 0.2f * TimeScaleFactor);
 		}
 		
 		private void MoveToTarget()
@@ -506,7 +509,7 @@ namespace ImpossibleOdds.TacticalCamera
 				originalPosition.y = CurrentHeight;
 				
 				characterController.Move(Vector3.Lerp(originalPosition, targetPosition, t) - cachedTransform.position);
-				time += Time.deltaTime;
+				time += DeltaTime;
 				
 				yield return null;
 			}
